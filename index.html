@@ -196,6 +196,8 @@ a.head-btn{text-decoration:none;display:inline-flex;align-items:center;justify-c
 #measureBtn{margin-top:10px;width:100%;padding:8px;border:1.5px solid #7a8bb3;border-radius:7px;background:#f4f7ff;color:#1b2340;font-size:13px;font-weight:900;cursor:pointer;touch-action:manipulation}
 #measureBtn:hover{background:#e4ebfb}
 #measureResult{font-size:12px;font-weight:900;color:#1b2340;margin-top:8px;min-height:34px;line-height:1.6}
+.sp-incomplete{font-size:12px;font-weight:800;color:#8a6d1e;background:#fdf6e2;border:1px dashed #d9b84a;border-radius:8px;padding:10px 12px;line-height:1.7;margin:6px 0}
+.tn{touch-action:none}
 .sp-note{font-size:10.5px;color:var(--muted);font-weight:700;margin-top:8px;line-height:1.6}
 
 /* ── Clear screen ── */
@@ -319,7 +321,7 @@ button{touch-action:manipulation;-webkit-tap-highlight-color:transparent}
         <div id="gate-bar">
           <span class="gate-bar-label">ゲートを選ぶ：</span>
           <span id="gateBtns" style="display:flex;gap:6px;flex-wrap:wrap"></span>
-          <span class="gate-bar-hint">置いたゲートはタップで削除</span>
+          <span class="gate-bar-hint">配線：出力ピン（青）→入力ピンの順にタップかドラッグ／ゲートはドラッグで移動・✕で削除／線はタップで削除</span>
         </div>
         <div id="toolbar">
           <button id="backToIntroBtn" onclick="showIntro()">← 説明へ</button>
@@ -358,12 +360,13 @@ button{touch-action:manipulation;-webkit-tap-highlight-color:transparent}
 
 <script>
 // ====================== ゲート仕様 ======================
+// pins: 入出力ピンの本数（量子ゲートは可逆なので入=出）。pinMarks: 各ピン行の役割（●制御/⊕標的）
 const GATESPEC = {
-  X:    { arity:1, btn:'X',    fill:'#fde3dc', stroke:'#d3603f', text:'X' },
-  H:    { arity:1, btn:'H',    fill:'#ddeafc', stroke:'#2e7dd1', text:'H' },
-  Z:    { arity:1, btn:'Z',    fill:'#ece1fb', stroke:'#8a5ac4', text:'Z' },
-  CNOT: { arity:2, btn:'CNOT ●—⊕', roles:['制御（●）','標的（⊕）'] },
-  CCX:  { arity:3, btn:'トフォリ ●●—⊕', roles:['制御1つ目（●）','制御2つ目（●）','標的（⊕）'] },
+  X:    { pins:1, btn:'X', w:46, fill:'#fde3dc', stroke:'#d3603f', short:'X' },
+  H:    { pins:1, btn:'H', w:46, fill:'#ddeafc', stroke:'#2e7dd1', short:'H' },
+  Z:    { pins:1, btn:'Z', w:46, fill:'#ece1fb', stroke:'#8a5ac4', short:'Z' },
+  CNOT: { pins:2, btn:'CNOT ●—⊕', w:86, fill:'#e2f4f0', stroke:'#1b6e63', short:'CNOT', pinMarks:['●','⊕'] },
+  CCX:  { pins:3, btn:'トフォリ ●●—⊕', w:86, fill:'#e2f4f0', stroke:'#1b6e63', short:'トフォリ', pinMarks:['●','●','⊕'] },
 };
 
 // ====================== レベル定義 ======================
@@ -374,14 +377,14 @@ const LEVELS = [
   {
     name: "Xゲート：0と1を入れ替える",
     label: "LEVEL 1", shortName: "X",
-    desc: "量子ビット A に X を置いて、|0⟩ を |1⟩ にしてください。（|0⟩は「ゼロの状態」と読む記号です）",
+    desc: "A の入力と出力のあいだに X をつないで、|0⟩ を |1⟩ にしてください。（|0⟩は「ゼロの状態」と読む記号です）",
     qlink: "|0⟩・|1⟩ は量子ビットの状態を表す記号で、「ゼロの状態」「イチの状態」と読みます。量子コンピュータの状態は「答え候補ごとに矢印が1本ずつ並んだ一覧表」で表され、矢印の長さの2乗が、その候補が測定で出る確率です。Xゲートは0と1の行の矢印を入れ替えるだけの、いちばん古典に近いゲートです。",
     qubits: 1, labels: ["A"], gates: ["X"],
     mode: "state", target: [0, 1],
     dialogue: [
       { who:'cat', img:'cat', text:'ようこそ、量子回路の練習場へ。<a href="https://ruglerugle.github.io/quantum-computer/" target="_blank" rel="noopener">量子コンピュータの旅</a>では、量子の計算を<strong>矢印の一覧表</strong>で追いかけたね。今度は自分の手で回路を組んで、同じ計算を確かめてみよう。まずはXゲートからだよ。' },
       { who:'rabbit', img:'rabbit', text:'Xは覚えています。0と1を入れ替えるゲートで、論理回路でいうNOTの量子版ということでしたね。' },
-      { who:'cat', img:'catThink', text:'そう。回路図では、横線が量子ビット1個。左が過去、右が未来で、線の上に置いたゲートが左から順に働くんだ。線の上にXを1個置いて、|0⟩を|1⟩にしてごらん。' },
+      { who:'cat', img:'catThink', text:'そう。回路図では、入力から出力までつないだ1本の線が、量子ビット1個ぶんの通り道。左が過去、右が未来で、線の途中に挟んだゲートが順に働くんだ。Aの入力と出力のあいだにXを1個つないで、|0⟩を|1⟩にしてごらん。' },
       { who:'rabbit', img:'rabbitThink', text:'一覧表でいうと、|0⟩の行にあった長さ1の矢印が|1⟩の行に引っ越せば成功ですね。やってみます。' },
     ],
     solution: [ {t:'X', q:[0], c:1} ],
@@ -501,10 +504,15 @@ const LEVELS = [
   {
     name: "SWAPを自作する",
     label: "LEVEL 9", shortName: "SWAP",
-    desc: "CNOT を3個使って、A と B の中身をそっくり入れ替える回路（SWAP）を作ってください。",
+    desc: "CNOT を3個使って、A と B の中身をそっくり入れ替える回路（SWAP）を作ってください。（配線を交差させて反対側の出力へ直結するのは不可です）",
     qlink: "SWAPはCNOT3個で作れます。A⊕Bを作って往復させると、メモ用の置き場所を使わずに2つの値が入れ替わります。実物の量子コンピュータでは離れた量子ビットどうしを直接つなげないことが多く、SWAPで値を隣へ隣へと運びます。ちなみに古典回路でも同じ手（XOR3回の入れ替え）が使えます。",
     qubits: 2, labels: ["A","B"], gates: ["CNOT"],
     mode: "unitary", targetMap: i => ((i&1)<<1) | ((i>>1)&1),
+    require: () => {
+      const ev = evalCircuit(0);
+      return (ev && ev.perm.every((p, q) => p === q)) ? {ok:true}
+        : {ok:false, msg:'配線の交差で入れ替えるのは不可です。各入力は同じ記号の出力へつなぎ、入れ替えはCNOTで作ってください。'};
+    },
     dialogue: [
       { who:'cat', img:'cat', text:'今度はパズルだよ。CNOTだけを3個使って、AとBの中身をそっくり入れ替える回路——SWAPを作ってみよう。' },
       { who:'rabbit', img:'rabbitThink', text:'入れ替えって、片方の値をどこかに覚えておかないとできない気がします。量子ビットは2本しかないのに……。' },
@@ -567,19 +575,19 @@ const LEVELS = [
 ];
 
 // ====================== 状態 ======================
-const NCOL = 6;
 let currentLevelIdx = 0;
 let cleared = JSON.parse(localStorage.getItem("quantum_circuit_cleared") || "[]");
-let placed = [];      // {id, type, col, qubits:[...]}  CNOT:[制御,標的] CCX:[制御,制御,標的]
-let pending = null;   // {type, picks:[{col,row}]}
-let inputBits = [];   // unitaryレベルの入力切り替え（行ごとに0/1）
+let nodes = [], pins = [], wires = [];
 let idc = 1;
+let dragNode = null, dragOffset = {x:0,y:0}, dragMoved = false;
+let wireStart = null, tempWireEnd = null;
+let inputBits = [];   // unitaryレベルの入力切り替え（量子ビットごとに0/1）
 
 const svg = document.getElementById('svg');
-const LEFTW = 96, CELLW = 88, ROWH = 78, TOPPAD = 16;
 
 function LV(){ return LEVELS[currentLevelIdx]; }
-function countGate(t){ return placed.filter(g => g.type === t).length; }
+function countGate(t){ return nodes.filter(n => n.type === t).length; }
+function uid(){ return idc++; }
 
 // ====================== ナビ・画面切り替え ======================
 function toggleSidebar(){
@@ -645,129 +653,224 @@ function buildGateBar(){
   document.querySelectorAll('#gateBtns .gateBtn').forEach(btn => {
     btn.addEventListener('click', () => {
       const t = btn.dataset.gate;
-      if (pending && pending.type === t){ cancelPending(); return; }
-      pending = { type: t, picks: [] };
-      document.querySelectorAll('#gateBtns .gateBtn').forEach(b => b.classList.toggle('armed', b === btn));
-      updateGuide();
-      renderCircuit();
+      const W = Number(svg.getAttribute('width')) || 760;
+      const H = Number(svg.getAttribute('height')) || 260;
+      addNode(t, W*0.30 + Math.random()*Math.max(80, W*0.22), 36 + Math.random()*Math.max(110, H-170));
+      updateAll();
     });
   });
 }
-function cancelPending(){
-  pending = null;
-  document.querySelectorAll('#gateBtns .gateBtn').forEach(b => b.classList.remove('armed'));
-  updateGuide();
-  renderCircuit();
-}
-function updateGuide(){
-  const el = document.getElementById('status');
-  if (!pending){ el.textContent = ''; return; }
-  const spec = GATESPEC[pending.type];
-  if (spec.arity === 1){
-    el.textContent = `${pending.type}：置きたいマスをタップ`;
-  } else {
-    const step = pending.picks.length;
-    const same = step > 0 ? '（同じ列で）' : '';
-    el.textContent = `${spec.btn}：${spec.roles[step]}の行のマスを${same}タップ`;
-  }
-}
 
 // ====================== 回路操作 ======================
+// ノード: INPUT(出力ピン1)・OUTPUT(入力ピン1)・ゲート(入=出=GATESPEC.pins)。
+// 配線は出力ピン→入力ピンの1対1（分岐＝クローン禁止、合流なし、ループなし）
+function addNode(type, x, y, opts = {}){
+  const id = uid();
+  let inCount, outCount;
+  if (type === 'INPUT'){ inCount = 0; outCount = 1; }
+  else if (type === 'OUTPUT'){ inCount = 1; outCount = 0; }
+  else { inCount = GATESPEC[type].pins; outCount = inCount; }
+  const node = { id, type, x, y, label: opts.label || type, qidx: opts.qidx, inPins: [], outPins: [] };
+  for (let i = 0; i < inCount; i++){ const p = {id:uid(), nodeId:id, kind:'in', index:i}; pins.push(p); node.inPins.push(p.id); }
+  for (let i = 0; i < outCount; i++){ const p = {id:uid(), nodeId:id, kind:'out', index:i}; pins.push(p); node.outPins.push(p.id); }
+  nodes.push(node);
+  return node;
+}
+function getNode(id){ return nodes.find(n => n.id === id); }
+function getPin(id){ return pins.find(p => p.id === id); }
+function wireTo(pinId){ return wires.find(w => w.toPin === pinId); }
+function wireFrom(pinId){ return wires.find(w => w.fromPin === pinId); }
+
+function nodeWidth(n){ return (n.type === 'INPUT' || n.type === 'OUTPUT') ? 66 : GATESPEC[n.type].w; }
+function nodeHeight(n){
+  if (n.type === 'INPUT' || n.type === 'OUTPUT') return 38;
+  const k = GATESPEC[n.type].pins;
+  return k === 1 ? 46 : (k === 2 ? 66 : 92);
+}
+function pinPos(pin){
+  const node = getNode(pin.nodeId), w = nodeWidth(node), h = nodeHeight(node);
+  const list = pin.kind === 'in' ? node.inPins : node.outPins;
+  const y = node.y + h/2 - ((list.length - 1) * 24) / 2 + pin.index * 24;
+  return { x: pin.kind === 'in' ? node.x : node.x + w, y };
+}
+
 function resetCircuit(){
-  placed = [];
-  cancelPending();
-  inputBits = new Array(LV().qubits).fill(0);
+  nodes = []; pins = []; wires = [];
+  wireStart = null; tempWireEnd = null; dragNode = null;
+  const lv = LV();
+  inputBits = new Array(lv.qubits).fill(0);
+  const wrap = document.getElementById('canvasWrap');
+  const minH = lv.qubits === 3 ? 340 : (lv.qubits === 2 ? 270 : 220);
+  const W = Math.max((wrap.clientWidth || 760) - 2, 560);
+  const H = Math.max((wrap.clientHeight || 0) - 2, minH);
+  svg.setAttribute('width', W);
+  svg.setAttribute('height', H);
+  const ys = lv.qubits === 1 ? [110] : (lv.qubits === 2 ? [70, 190] : [50, 160, 270]);
+  lv.labels.forEach((name, i) => addNode('INPUT', 28, ys[i], {label:name, qidx:i}));
+  lv.labels.forEach((name, i) => addNode('OUTPUT', W - 96 - 8, ys[i], {label:name, qidx:i}));
   hideNextBtn();
   document.getElementById('verifyWrap').classList.remove('visible');
   document.getElementById('measureResult').textContent = '';
+  document.getElementById('status').textContent = '';
   updateAll();
 }
-function coveredRows(g){
-  if (g.qubits.length === 1) return [g.qubits[0]];
-  const lo = Math.min(...g.qubits), hi = Math.max(...g.qubits);
-  const rows = [];
-  for (let r = lo; r <= hi; r++) rows.push(r);
-  return rows;
-}
-function gateAt(col, row){
-  return placed.find(g => g.col === col && coveredRows(g).includes(row));
-}
-function removeGate(g){
-  placed = placed.filter(x => x.id !== g.id);
+
+function deleteNode(id){
+  const node = getNode(id);
+  const pinIds = [...node.inPins, ...node.outPins];
+  wires = wires.filter(w => !pinIds.includes(w.fromPin) && !pinIds.includes(w.toPin));
+  pins = pins.filter(p => p.nodeId !== id);
+  nodes = nodes.filter(n => n.id !== id);
   updateAll();
 }
-function tryPick(col, row){
-  const lv = LV();
-  if (col < 0 || col >= NCOL || row < 0 || row >= lv.qubits){ cancelPending(); return; }
-  const hit = gateAt(col, row);
-  if (hit){ removeGate(hit); return; }
-  if (!pending) return;
-  const spec = GATESPEC[pending.type];
-  if (pending.picks.length > 0 && col !== pending.picks[0].col){
-    flashStatus('制御と標的は同じ列に置きます');
-    return;
-  }
-  if (pending.picks.some(p => p.row === row)) return;
-  pending.picks.push({ col, row });
-  if (pending.picks.length === spec.arity){
-    const c = pending.picks[0].col;
-    const rows = pending.picks.map(p => p.row);
-    const lo = Math.min(...rows), hi = Math.max(...rows);
-    let blocked = false;
-    for (let r = lo; r <= hi; r++) if (gateAt(c, r)) blocked = true;
-    if (blocked){
-      flashStatus('そこには置けません（別のゲートと重なります）');
-      pending.picks = [];
-    } else {
-      placed.push({ id: idc++, type: pending.type, col: c, qubits: rows });
-      pending.picks = [];
+
+function createsCycle(outPin, inPin){
+  // inPin側のノードから下流をたどって outPin のノードに戻れたらループ
+  const target = outPin.nodeId;
+  const stack = [inPin.nodeId], seen = new Set();
+  while (stack.length){
+    const nid = stack.pop();
+    if (nid === target) return true;
+    if (seen.has(nid)) continue;
+    seen.add(nid);
+    for (const opid of getNode(nid).outPins){
+      const w = wireFrom(opid);
+      if (w) stack.push(getPin(w.toPin).nodeId);
     }
   }
-  updateGuide();
+  return false;
+}
+
+function tryConnect(aId, bId){
+  let out = getPin(aId), inp = getPin(bId);
+  if (out.kind === 'in' && inp.kind === 'out'){ const t = out; out = inp; inp = t; }
+  if (out.kind !== 'out' || inp.kind !== 'in') return;
+  if (out.nodeId === inp.nodeId){ flashStatus('同じ部品の入出力は直結できません'); return; }
+  if (wireFrom(out.id)){ flashStatus('量子の配線は分岐できません（量子ビットはコピー不可：クローン禁止）'); return; }
+  if (createsCycle(out, inp)){ flashStatus('ループは作れません（時間は左から右へ一方向です）'); return; }
+  wires = wires.filter(w => w.toPin !== inp.id);
+  wires.push({ id: uid(), fromPin: out.id, toPin: inp.id });
+}
+
+function onPinTap(pin){
+  if (!wireStart){
+    if (pin.kind === 'out'){
+      const ex = wireFrom(pin.id);
+      if (ex) wires = wires.filter(w => w.id !== ex.id);  // 線を拾い直す
+      wireStart = pin.id;
+    } else {
+      const ex = wireTo(pin.id);
+      if (ex){ wires = wires.filter(w => w.id !== ex.id); wireStart = ex.fromPin; }
+    }
+  } else {
+    if (wireStart === pin.id) wireStart = null;
+    else { tryConnect(wireStart, pin.id); wireStart = null; }
+    tempWireEnd = null;
+  }
   updateAll();
 }
+
 let statusTimer = null;
 function flashStatus(text){
   const el = document.getElementById('status');
   el.textContent = text;
   clearTimeout(statusTimer);
-  statusTimer = setTimeout(updateGuide, 1800);
+  statusTimer = setTimeout(() => { el.textContent = ''; }, 2600);
 }
 
 // ====================== シミュレータ ======================
-// 基底状態の番号: q0（上の行）を最上位ビットとする。amp は実数（この題材のゲートはすべて実数）
+// 基底状態の番号: q0（一番上の量子ビット）を最上位ビットとする。amp は実数（この題材のゲートはすべて実数）
 function maskOf(q, n){ return 1 << (n - 1 - q); }
-function runCircuit(inputIdx){
-  const n = LV().qubits, N = 1 << n;
-  const s = new Float64Array(N);
-  s[inputIdx] = 1;
-  for (let c = 0; c < NCOL; c++){
-    for (const g of placed){
-      if (g.col !== c) continue;
-      applyGate(s, g, n);
+
+// 回路全体を評価する。配線が未完成なら null。
+// 返り値 {s: 出力ラベル順に並べた状態ベクトル, perm: perm[入力q]=つながった出力ノードのqidx}
+function evalCircuit(inputIdx){
+  const lv = LV(), n = lv.qubits;
+  // 完成チェック：全ピンに配線があること
+  for (const nd of nodes){
+    if (nd.type === 'INPUT'){ if (!wireFrom(nd.outPins[0])) return null; }
+    else if (nd.type === 'OUTPUT'){ if (!wireTo(nd.inPins[0])) return null; }
+    else {
+      for (const p of nd.inPins) if (!wireTo(p)) return null;
+      for (const p of nd.outPins) if (!wireFrom(p)) return null;
     }
   }
-  return s;
+  // スレッド追跡：入力qが各ゲートのどのピン行を通るか
+  const gq = new Map();               // gateId -> [pinIndex] = 量子ビット番号
+  const perm = new Array(n).fill(-1); // 入力q -> 到達した出力ノードのqidx
+  for (const inp of nodes.filter(x => x.type === 'INPUT')){
+    let w = wireFrom(inp.outPins[0]), guard = 0;
+    while (w){
+      if (++guard > 1000) return null;
+      const pin = getPin(w.toPin), nd = getNode(pin.nodeId);
+      if (nd.type === 'OUTPUT'){ perm[inp.qidx] = nd.qidx; break; }
+      if (!gq.has(nd.id)) gq.set(nd.id, []);
+      gq.get(nd.id)[pin.index] = inp.qidx;
+      w = wireFrom(nd.outPins[pin.index]);
+    }
+  }
+  if (perm.includes(-1)) return null;
+  // ゲートをトポロジカル順（配線の依存順＝時間順）に並べる
+  const gates = nodes.filter(x => x.type !== 'INPUT' && x.type !== 'OUTPUT');
+  const indeg = new Map(), children = new Map();
+  gates.forEach(g => { indeg.set(g.id, 0); children.set(g.id, []); });
+  for (const g of gates){
+    for (const pid of g.inPins){
+      const src = getNode(getPin(wireTo(pid).fromPin).nodeId);
+      if (src.type !== 'INPUT'){
+        indeg.set(g.id, indeg.get(g.id) + 1);
+        children.get(src.id).push(g.id);
+      }
+    }
+  }
+  const queue = gates.filter(g => indeg.get(g.id) === 0).map(g => g.id);
+  const order = [];
+  while (queue.length){
+    const gid = queue.shift();
+    order.push(gid);
+    for (const cid of children.get(gid)){
+      indeg.set(cid, indeg.get(cid) - 1);
+      if (indeg.get(cid) === 0) queue.push(cid);
+    }
+  }
+  if (order.length !== gates.length) return null; // ループ（接続時に防いでいるが保険）
+  // 状態ベクトルを流す
+  const N = 1 << n;
+  let s = new Float64Array(N);
+  s[inputIdx] = 1;
+  for (const gid of order) applyGate(s, getNode(gid).type, gq.get(gid) || [], n);
+  // 出力ノードのラベル順に並べ替え（配線の交差＝ラベルの付け替えを反映）
+  if (perm.some((p, q) => p !== q)){
+    const s2 = new Float64Array(N);
+    for (let i = 0; i < N; i++){
+      let j = 0;
+      for (let q = 0; q < n; q++) if (i & maskOf(q, n)) j |= maskOf(perm[q], n);
+      s2[j] = s[i];
+    }
+    s = s2;
+  }
+  return { s, perm };
 }
-function applyGate(s, g, n){
+
+function applyGate(s, type, qs, n){
   const N = s.length;
-  if (g.type === 'X'){
-    const m = maskOf(g.qubits[0], n);
+  if (type === 'X'){
+    const m = maskOf(qs[0], n);
     for (let i = 0; i < N; i++) if (!(i & m)){ const j = i | m, t = s[i]; s[i] = s[j]; s[j] = t; }
-  } else if (g.type === 'Z'){
-    const m = maskOf(g.qubits[0], n);
+  } else if (type === 'Z'){
+    const m = maskOf(qs[0], n);
     for (let i = 0; i < N; i++) if (i & m) s[i] = -s[i];
-  } else if (g.type === 'H'){
-    const m = maskOf(g.qubits[0], n), r = Math.SQRT1_2;
+  } else if (type === 'H'){
+    const m = maskOf(qs[0], n), r = Math.SQRT1_2;
     for (let i = 0; i < N; i++) if (!(i & m)){
       const j = i | m, a = s[i], b = s[j];
       s[i] = (a + b) * r; s[j] = (a - b) * r;
     }
-  } else if (g.type === 'CNOT'){
-    const mc = maskOf(g.qubits[0], n), mt = maskOf(g.qubits[1], n);
+  } else if (type === 'CNOT'){
+    const mc = maskOf(qs[0], n), mt = maskOf(qs[1], n);
     for (let i = 0; i < N; i++) if ((i & mc) && !(i & mt)){ const j = i | mt, t = s[i]; s[i] = s[j]; s[j] = t; }
-  } else if (g.type === 'CCX'){
-    const m1 = maskOf(g.qubits[0], n), m2 = maskOf(g.qubits[1], n), mt = maskOf(g.qubits[2], n);
+  } else if (type === 'CCX'){
+    const m1 = maskOf(qs[0], n), m2 = maskOf(qs[1], n), mt = maskOf(qs[2], n);
     for (let i = 0; i < N; i++) if ((i & m1) && (i & m2) && !(i & mt)){ const j = i | mt, t = s[i]; s[i] = s[j]; s[j] = t; }
   }
 }
@@ -803,68 +906,57 @@ function panelInputIdx(){
   for (let q = 0; q < lv.qubits; q++) if (inputBits[q]) idx |= maskOf(q, lv.qubits);
   return idx;
 }
-function cellCenter(col, row){
-  return { x: LEFTW + col * CELLW + CELLW / 2, y: TOPPAD + row * ROWH + ROWH / 2 };
-}
-function renderCircuit(){
-  const lv = LV(), n = lv.qubits;
-  const W = LEFTW + NCOL * CELLW + 16;
-  const H = TOPPAD + n * ROWH + 12;
-  svg.setAttribute('width', W);
-  svg.setAttribute('height', H);
-  let out = '';
 
-  // 列のガイド
-  for (let c = 0; c < NCOL; c++){
-    if (c % 2 === 0) out += `<rect x="${LEFTW + c*CELLW}" y="${TOPPAD-4}" width="${CELLW}" height="${n*ROWH+8}" fill="rgba(46,95,209,.035)"/>`;
+function render(){
+  const lv = LV();
+  let out = '';
+  // 配線
+  for (const w of wires){
+    const p1 = pinPos(getPin(w.fromPin)), p2 = pinPos(getPin(w.toPin));
+    const mx = (p1.x + p2.x) / 2;
+    out += `<path class="tn" data-wireid="${w.id}" d="M ${p1.x} ${p1.y} C ${mx} ${p1.y}, ${mx} ${p2.y}, ${p2.x} ${p2.y}" stroke="#7a8bb3" stroke-width="3.5" fill="none" style="cursor:pointer"/>`;
   }
-  // ワイヤと入力ラベル
-  const clickable = lv.mode === 'unitary';
-  for (let r = 0; r < n; r++){
-    const y = TOPPAD + r * ROWH + ROWH / 2;
-    out += `<line x1="${LEFTW}" y1="${y}" x2="${W-10}" y2="${y}" stroke="#8a97b8" stroke-width="2.5"/>`;
-    out += `<text x="12" y="${y-12}" font-size="13" font-weight="900" fill="#65718f">${lv.labels[r]}</text>`;
-    const bit = clickable ? inputBits[r] : ((panelInputIdx() & maskOf(r,n)) ? 1 : 0);
-    const boxCls = clickable ? 'stroke="#2e7dd1" stroke-width="2"' : 'stroke="#8a97b8" stroke-width="1.5"';
-    out += `<g data-inrow="${r}" style="cursor:${clickable?'pointer':'default'}">
-      <rect x="10" y="${y-16}" width="58" height="32" rx="7" fill="#fff" ${boxCls}/>
-      <text x="${clickable?31:39}" y="${y+6}" font-size="15" font-weight="900" text-anchor="middle" fill="#1b2340" font-family="ui-monospace,monospace" style="pointer-events:none">|${bit}⟩</text>
-      ${clickable?`<text x="56" y="${y+5}" font-size="12" text-anchor="middle" fill="#2e7dd1" style="pointer-events:none">⇄</text>`:''}
-    </g>`;
+  // 引っ張り中の仮配線
+  if (wireStart && tempWireEnd){
+    const p1 = pinPos(getPin(wireStart));
+    out += `<path d="M ${p1.x} ${p1.y} L ${tempWireEnd.x} ${tempWireEnd.y}" stroke="#d4870a" stroke-width="2.5" stroke-dasharray="6 4" fill="none" pointer-events="none"/>`;
   }
-  // 配置済みゲート
-  for (const g of placed){
-    const cx = LEFTW + g.col * CELLW + CELLW / 2;
-    if (GATESPEC[g.type].arity === 1){
-      const spec = GATESPEC[g.type];
-      const y = TOPPAD + g.qubits[0] * ROWH + ROWH / 2;
-      out += `<g data-gid="${g.id}" style="cursor:pointer">
-        <rect x="${cx-22}" y="${y-22}" width="44" height="44" rx="9" fill="${spec.fill}" stroke="${spec.stroke}" stroke-width="2.5"/>
-        <text x="${cx}" y="${y+7}" font-size="20" font-weight="950" text-anchor="middle" fill="#1b2340" style="pointer-events:none">${spec.text}</text>
-      </g>`;
+  // ノード
+  for (const node of nodes){
+    const w = nodeWidth(node), h = nodeHeight(node);
+    let fill = '#dce8f5', stroke = '#7a8bb3';
+    if (node.type === 'INPUT'){ fill = '#dff3e8'; stroke = '#3a9e63'; }
+    else if (node.type === 'OUTPUT'){ fill = '#fef0e6'; stroke = '#c56a2a'; }
+    else { fill = GATESPEC[node.type].fill; stroke = GATESPEC[node.type].stroke; }
+    out += `<g class="tn" data-nodeid="${node.id}" style="cursor:grab">`;
+    out += `<rect x="${node.x}" y="${node.y}" width="${w}" height="${h}" rx="9" fill="${fill}" stroke="${stroke}" stroke-width="2"/>`;
+    if (node.type === 'INPUT'){
+      const bit = lv.mode === 'unitary' ? inputBits[node.qidx] : 0;
+      out += `<text x="${node.x + w/2}" y="${node.y + 13}" font-size="9" font-weight="900" text-anchor="middle" fill="#3a9e63" pointer-events="none">入力${lv.mode==='unitary' ? ' ⇄' : ''}</text>`;
+      out += `<text x="${node.x + w/2}" y="${node.y + 30}" font-size="14" font-weight="900" text-anchor="middle" fill="#1b2340" font-family="ui-monospace,monospace" pointer-events="none">${node.label}=|${bit}⟩</text>`;
+    } else if (node.type === 'OUTPUT'){
+      out += `<text x="${node.x + w/2}" y="${node.y + 13}" font-size="9" font-weight="900" text-anchor="middle" fill="#c56a2a" pointer-events="none">出力</text>`;
+      out += `<text x="${node.x + w/2}" y="${node.y + 30}" font-size="15" font-weight="950" text-anchor="middle" fill="#1b2340" pointer-events="none">${node.label}</text>`;
     } else {
-      const tRow = g.qubits[g.qubits.length - 1];
-      const ctrls = g.qubits.slice(0, -1);
-      const ys = g.qubits.map(r => TOPPAD + r * ROWH + ROWH / 2);
-      const yMin = Math.min(...ys), yMax = Math.max(...ys);
-      const yT = TOPPAD + tRow * ROWH + ROWH / 2;
-      out += `<g data-gid="${g.id}" style="cursor:pointer">
-        <rect x="${cx-18}" y="${yMin-20}" width="36" height="${yMax-yMin+40}" fill="transparent"/>
-        <line x1="${cx}" y1="${yMin}" x2="${cx}" y2="${yMax}" stroke="#1b6e63" stroke-width="3"/>
-        ${ctrls.map(r => `<circle cx="${cx}" cy="${TOPPAD + r*ROWH + ROWH/2}" r="8" fill="#1b6e63"/>`).join('')}
-        <circle cx="${cx}" cy="${yT}" r="14" fill="#e2f4f0" stroke="#1b6e63" stroke-width="3"/>
-        <line x1="${cx-9}" y1="${yT}" x2="${cx+9}" y2="${yT}" stroke="#1b6e63" stroke-width="3"/>
-        <line x1="${cx}" y1="${yT-9}" x2="${cx}" y2="${yT+9}" stroke="#1b6e63" stroke-width="3"/>
-      </g>`;
+      const spec = GATESPEC[node.type];
+      const fs = spec.pins === 1 ? 19 : (node.type === 'CCX' ? 11 : 12);
+      out += `<text x="${node.x + w/2}" y="${node.y + h/2 + (spec.pins===1 ? 7 : 4)}" font-size="${fs}" font-weight="950" text-anchor="middle" fill="#1b2340" pointer-events="none">${spec.short}</text>`;
+      if (spec.pinMarks){
+        for (let i = 0; i < spec.pins; i++){
+          const py = node.y + h/2 - ((spec.pins - 1) * 24) / 2 + i * 24;
+          out += `<text x="${node.x + 12}" y="${py + 4}" font-size="11" font-weight="900" text-anchor="middle" fill="${stroke}" pointer-events="none">${spec.pinMarks[i]}</text>`;
+          out += `<text x="${node.x + w - 12}" y="${py + 4}" font-size="11" font-weight="900" text-anchor="middle" fill="${stroke}" pointer-events="none">${spec.pinMarks[i]}</text>`;
+        }
+      }
+      out += `<text data-del="${node.id}" x="${node.x + w - 5}" y="${node.y + 11}" font-size="11" text-anchor="end" fill="#8892ad" style="cursor:pointer">✕</text>`;
     }
-  }
-  // 選択途中のマーカー
-  if (pending){
-    for (let k = 0; k < pending.picks.length; k++){
-      const p = pending.picks[k];
-      const { x, y } = cellCenter(p.col, p.row);
-      out += `<circle cx="${x}" cy="${y}" r="15" fill="none" stroke="#d4870a" stroke-width="3" stroke-dasharray="5 4"/>
-        <circle cx="${x}" cy="${y}" r="6" fill="#d4870a"/>`;
+    out += `</g>`;
+    // ピン（ノードの上に重ねる）
+    for (const pid of [...node.inPins, ...node.outPins]){
+      const pin = getPin(pid), pos = pinPos(pin);
+      const sel = wireStart === pin.id;
+      out += `<circle class="tn" data-pinid="${pin.id}" cx="${pos.x}" cy="${pos.y}" r="17" fill="transparent"/>`;
+      out += `<circle class="tn" data-pinid="${pin.id}" cx="${pos.x}" cy="${pos.y}" r="9" fill="${sel ? '#ffd54f' : (pin.kind === 'out' ? '#378add' : '#7a8bb3')}" stroke="${sel ? '#d4870a' : '#5a6c99'}" stroke-width="${sel ? 3 : 2}" style="cursor:crosshair"/>`;
     }
   }
   svg.innerHTML = out;
@@ -873,10 +965,16 @@ function renderCircuit(){
 function renderStatePanel(){
   const lv = LV(), n = lv.qubits;
   const idx = panelInputIdx();
-  const s = runCircuit(idx);
+  const ev = evalCircuit(idx);
   document.getElementById('spInputNote').innerHTML = lv.mode === 'unitary'
-    ? `入力：|${ketStr(idx, n)}⟩（回路図の左端の |0⟩/|1⟩ をタップで切り替え）`
+    ? `入力：|${ketStr(idx, n)}⟩（左の入力ノードをタップで 0/1 切り替え）`
     : `入力：|${ketStr(idx, n)}⟩ から出発`;
+  if (!ev){
+    document.getElementById('ampTable').innerHTML =
+      '<div class="sp-incomplete">配線が未完成です。<br>入力 →（ゲート）→ 出力まで、すべてのピンをつなぐと一覧表が出ます。</div>';
+    return;
+  }
+  const s = ev.s;
   let html = '';
   for (let i = 0; i < s.length; i++){
     const a = s[i], p = a * a;
@@ -901,40 +999,91 @@ function renderStatePanel(){
 }
 
 function updateAll(){
-  renderCircuit();
+  render();
   renderStatePanel();
 }
 
-// ====================== 入力操作（クリック） ======================
-svg.addEventListener('click', (e) => {
-  const rect = svg.getBoundingClientRect();
-  const x = e.clientX - rect.left, y = e.clientY - rect.top;
-  const lv = LV();
-  // 入力トグル
-  let el = e.target;
-  while (el && el !== svg && !el.dataset?.inrow && !el.dataset?.gid) el = el.parentElement;
-  if (el && el !== svg && el.dataset?.inrow !== undefined && el.dataset.inrow !== ''){
-    if (lv.mode === 'unitary'){
-      const r = Number(el.dataset.inrow);
-      inputBits[r] = inputBits[r] ? 0 : 1;
-      document.getElementById('measureResult').textContent = '';
-      updateAll();
-    }
+// ====================== 入力操作（ポインタ） ======================
+function svgXY(clientX, clientY){
+  const r = svg.getBoundingClientRect();
+  return { x: clientX - r.left, y: clientY - r.top };
+}
+function startNodeDrag(node, cx, cy){
+  dragNode = node;
+  dragMoved = false;
+  const { x, y } = svgXY(cx, cy);
+  dragOffset.x = x - node.x;
+  dragOffset.y = y - node.y;
+}
+let rafPending = false;
+function scheduleRender(){
+  if (rafPending) return;
+  rafPending = true;
+  requestAnimationFrame(() => { rafPending = false; render(); });
+}
+
+svg.addEventListener('pointerdown', (e) => {
+  const delEl = e.target.closest ? e.target.closest('[data-del]') : null;
+  if (delEl){ e.preventDefault(); deleteNode(Number(delEl.dataset.del)); return; }
+  const pinEl = e.target.closest ? e.target.closest('[data-pinid]') : null;
+  if (pinEl){ e.preventDefault(); onPinTap(getPin(Number(pinEl.dataset.pinid))); return; }
+  const wireEl = e.target.closest ? e.target.closest('[data-wireid]') : null;
+  if (wireEl){ e.preventDefault(); wires = wires.filter(w => w.id !== Number(wireEl.dataset.wireid)); updateAll(); return; }
+  const nodeEl = e.target.closest ? e.target.closest('[data-nodeid]') : null;
+  if (nodeEl){
+    e.preventDefault();
+    svg.setPointerCapture(e.pointerId);
+    startNodeDrag(getNode(Number(nodeEl.dataset.nodeid)), e.clientX, e.clientY);
     return;
   }
-  if (el && el !== svg && el.dataset?.gid){
-    const g = placed.find(g => g.id === Number(el.dataset.gid));
-    if (g){ removeGate(g); return; }
-  }
-  const col = Math.floor((x - LEFTW) / CELLW);
-  const row = Math.floor((y - TOPPAD) / ROWH);
-  tryPick(col, row);
+  if (wireStart){ wireStart = null; tempWireEnd = null; render(); }
 });
+svg.addEventListener('pointermove', (e) => {
+  if (!dragNode && !wireStart) return;
+  const { x, y } = svgXY(e.clientX, e.clientY);
+  if (dragNode){
+    e.preventDefault();
+    const nx = x - dragOffset.x, ny = y - dragOffset.y;
+    if (Math.abs(nx - dragNode.x) + Math.abs(ny - dragNode.y) > 4) dragMoved = true;
+    if (dragMoved){ dragNode.x = nx; dragNode.y = ny; scheduleRender(); }
+  } else {
+    tempWireEnd = { x, y };
+    scheduleRender();
+  }
+});
+svg.addEventListener('pointerup', (e) => {
+  try { svg.releasePointerCapture(e.pointerId); } catch(_){}
+  if (dragNode){
+    const n = dragNode;
+    dragNode = null;
+    if (!dragMoved && n.type === 'INPUT' && LV().mode === 'unitary'){
+      inputBits[n.qidx] = inputBits[n.qidx] ? 0 : 1;
+      document.getElementById('measureResult').textContent = '';
+    }
+    updateAll();
+    return;
+  }
+  if (wireStart){
+    const el = document.elementFromPoint(e.clientX, e.clientY);
+    const pinEl = el && el.closest ? el.closest('[data-pinid]') : null;
+    if (pinEl){
+      const pid = Number(pinEl.dataset.pinid);
+      if (pid !== wireStart){ tryConnect(wireStart, pid); wireStart = null; tempWireEnd = null; }
+    }
+    updateAll();
+  }
+});
+svg.addEventListener('pointercancel', () => { dragNode = null; });
 
 // ====================== 測定 ======================
 document.getElementById('measureBtn').addEventListener('click', () => {
   const lv = LV(), n = lv.qubits;
-  const s = runCircuit(panelInputIdx());
+  const ev = evalCircuit(panelInputIdx());
+  if (!ev){
+    document.getElementById('measureResult').textContent = '配線が未完成のため測定できません。';
+    return;
+  }
+  const s = ev.s;
   const r = Math.random();
   let acc = 0, hit = 0;
   for (let i = 0; i < s.length; i++){ acc += s[i] * s[i]; if (r <= acc){ hit = i; break; } }
@@ -949,6 +1098,10 @@ document.getElementById('measureBtn').addEventListener('click', () => {
 // ====================== 検証 ======================
 document.getElementById('runBtn').addEventListener('click', () => {
   const lv = LV(), n = lv.qubits;
+  if (!evalCircuit(lv.input || 0)){
+    showMsg(false, '配線が未完成です。すべてのピンをつないでから検証してください。');
+    return;
+  }
   let allPass = true;
   let html = '';
 
@@ -956,7 +1109,7 @@ document.getElementById('runBtn').addEventListener('click', () => {
     const ins = lv.testInputs || Array.from({ length: 1 << n }, (_, i) => i);
     html = '<table><tr><th>入力</th><th>回路の出力</th><th>期待する出力</th></tr>';
     for (const idx of ins){
-      const s = runCircuit(idx);
+      const s = evalCircuit(idx).s;
       let sig = 0, outIdx = -1;
       for (let i = 0; i < s.length; i++) if (Math.abs(s[i]) > 0.004){ sig++; outIdx = i; }
       const single = sig === 1 && Math.abs(Math.abs(s[outIdx]) - 1) < 0.01;
@@ -968,7 +1121,7 @@ document.getElementById('runBtn').addEventListener('click', () => {
     }
     html += '</table>';
   } else {
-    const s = runCircuit(lv.input || 0);
+    const s = evalCircuit(lv.input || 0).s;
     const t = lv.target;
     let dot = 0;
     for (let i = 0; i < s.length; i++) dot += s[i] * t[i];
@@ -1034,10 +1187,30 @@ document.getElementById('verifyClose').addEventListener('click', () => {
 });
 
 // ====================== 解答 ======================
+// solution の {t, q:[量子ビット], c:列} を、スレッド順に自動配線して再現する
 document.getElementById('answerBtn').addEventListener('click', () => {
   resetCircuit();
-  for (const g of LV().solution){
-    placed.push({ id: idc++, type: g.t, col: g.c, qubits: g.q.slice() });
+  const lv = LV();
+  const inputs = nodes.filter(x => x.type === 'INPUT');
+  const outputs = nodes.filter(x => x.type === 'OUTPUT');
+  const cursor = inputs.map(x => x.outPins[0]);  // 量子ビットごとの「現在の出力ピン」
+  const x0 = inputs[0].x + nodeWidth(inputs[0]);
+  const x1 = outputs[0].x;
+  const maxC = Math.max(...lv.solution.map(g => g.c));
+  for (const g of lv.solution){
+    const nd = addNode(g.t, 0, 0);
+    const gw = nodeWidth(nd), gh = nodeHeight(nd);
+    const cx = x0 + (x1 - x0) * (g.c + 1) / (maxC + 2);
+    const cy = g.q.reduce((a, q) => a + inputs[q].y, 0) / g.q.length + nodeHeight(inputs[0]) / 2;
+    nd.x = cx - gw / 2;
+    nd.y = cy - gh / 2;
+    g.q.forEach((q, k) => {
+      wires.push({ id: uid(), fromPin: cursor[q], toPin: nd.inPins[k] });
+      cursor[q] = nd.outPins[k];
+    });
+  }
+  for (const o of outputs){
+    wires.push({ id: uid(), fromPin: cursor[o.qidx], toPin: o.inPins[0] });
   }
   document.getElementById('status').textContent = '（解答例を表示中）';
   updateAll();
