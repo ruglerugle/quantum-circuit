@@ -171,6 +171,7 @@ a.head-btn{text-decoration:none;display:inline-flex;align-items:center;justify-c
 #verifyClose{background:#7a8bb3;border:none;color:#fff;border-radius:4px;padding:3px 10px;cursor:pointer;font-size:12px;font-weight:900}
 #verifyTable{overflow-x:auto}
 #verifyTable table{border-collapse:collapse;white-space:nowrap}
+.verify-note{font-size:12px;font-weight:750;color:#5a6c99;line-height:1.7;margin:0 0 7px}
 #verifyTable th,#verifyTable td{padding:3px 12px;text-align:center;border-bottom:1px solid #c9d2e4;font-size:13px;font-weight:750}
 #verifyTable tr.pass td{color:#2a7d1a;font-weight:900}
 #verifyTable tr.fail td{color:#c0241a;font-weight:900}
@@ -1143,7 +1144,9 @@ document.getElementById('runBtn').addEventListener('click', () => {
     let dot = 0;
     for (let i = 0; i < s.length; i++) dot += s[i] * t[i];
     const sign = dot < 0 ? -1 : 1;
-    html = '<table><tr><th>候補</th><th>回路の矢印</th><th>目標の矢印</th></tr>';
+    html = '<p class="verify-note">このレベルの目標は「矢印の一覧表」を作ることです。答え候補（0/1の並び）の行ごとに、'
+      + 'あなたの回路が作った矢印と目標の矢印を比べます。数値は矢印の長さと向き（＋＝右向き、−＝左向き、長さの2乗が確率）。</p>'
+      + '<table><tr><th>答え候補</th><th>回路が作った矢印</th><th>目標の矢印</th></tr>';
     for (let i = 0; i < s.length; i++){
       const a = s[i] * sign;
       const pass = Math.abs(a - t[i]) < 0.02;
