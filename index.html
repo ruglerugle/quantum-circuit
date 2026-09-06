@@ -611,6 +611,7 @@ function startGame(){
 
 function loadLevel(idx){
   if (idx !== undefined) currentLevelIdx = idx;
+  localStorage.setItem('quantum_circuit_level', currentLevelIdx);
   document.getElementById('clear-screen').style.display = 'none';
   const lv = LV(), total = LEVELS.length;
 
@@ -1277,7 +1278,9 @@ function showClearScreen(){
 }
 
 // ====================== 起動 ======================
-loadLevel(0);
+// 前回開いていたレベルを復元する（リロードでレベル1に戻らないように）
+const savedLevel = Number(localStorage.getItem('quantum_circuit_level'));
+loadLevel(Number.isInteger(savedLevel) && savedLevel >= 0 && savedLevel < LEVELS.length ? savedLevel : 0);
 </script>
 </body>
 </html>
