@@ -708,8 +708,12 @@ function resetCircuit(){
   svg.setAttribute('width', W);
   svg.setAttribute('height', H);
   const ys = lv.qubits === 1 ? [110] : (lv.qubits === 2 ? [70, 190] : [50, 160, 270]);
+  // 出力ノードは「見えている幅」の内側に置く（狭い画面でも最初から見える。
+  // キャンバス右側の余白は作業スペースとしてスクロールで使える）
+  const visW = Math.min(W, (wrap.clientWidth || W) - 2);
+  const outX = Math.max(visW - 104, 250);
   lv.labels.forEach((name, i) => addNode('INPUT', 28, ys[i], {label:name, qidx:i}));
-  lv.labels.forEach((name, i) => addNode('OUTPUT', W - 96 - 8, ys[i], {label:name, qidx:i}));
+  lv.labels.forEach((name, i) => addNode('OUTPUT', outX, ys[i], {label:name, qidx:i}));
   hideNextBtn();
   document.getElementById('verifyWrap').classList.remove('visible');
   document.getElementById('measureResult').textContent = '';
@@ -1201,6 +1205,9 @@ document.getElementById('answerBtn').addEventListener('click', () => {
   const inputs = nodes.filter(x => x.type === 'INPUT');
   const outputs = nodes.filter(x => x.type === 'OUTPUT');
   const cursor = inputs.map(x => x.outPins[0]);  // 量子ビットごとの「現在の出力ピン」
+  // 解答レイアウトはゲートが重ならないよう、キャンバス全幅を使う（狭い画面ではスクロールで見る）
+  const fullW = Number(svg.getAttribute('width')) || 760;
+  outputs.forEach(o => { o.x = fullW - 104; });
   const x0 = inputs[0].x + nodeWidth(inputs[0]);
   const x1 = outputs[0].x;
   const maxC = Math.max(...lv.solution.map(g => g.c));
