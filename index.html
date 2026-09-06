@@ -1214,23 +1214,43 @@ document.getElementById('answerBtn').addEventListener('click', () => {
   const inputs = nodes.filter(x => x.type === 'INPUT');
   const outputs = nodes.filter(x => x.type === 'OUTPUT');
   const cursor = inputs.map(x => x.outPins[0]);  // 量子ビットごとの「現在の出力ピン」
-  // 解答レイアウトはゲートが重ならないよう、キャンバス全幅を使う（狭い画面ではスクロールで見る）
-  const fullW = Number(svg.getAttribute('width')) || 760;
-  outputs.forEach(o => { o.x = fullW - 104; });
   const x0 = inputs[0].x + nodeWidth(inputs[0]);
-  const x1 = outputs[0].x;
   const maxC = Math.max(...lv.solution.map(g => g.c));
-  for (const g of lv.solution){
-    const nd = addNode(g.t, 0, 0);
-    const gw = nodeWidth(nd), gh = nodeHeight(nd);
-    const cx = x0 + (x1 - x0) * (g.c + 1) / (maxC + 2);
-    const cy = g.q.reduce((a, q) => a + inputs[q].y, 0) / g.q.length + nodeHeight(inputs[0]) / 2;
-    nd.x = cx - gw / 2;
-    nd.y = cy - gh / 2;
-    g.q.forEach((q, k) => {
-      wires.push({ id: uid(), fromPin: cursor[q], toPin: nd.inPins[k] });
-      cursor[q] = nd.outPins[k];
-    });
+  const maxGw = Math.max(...lv.solution.map(g => GATESPEC[g.t].w));
+  const nCols = new Set(lv.solution.map(g => g.c)).size;
+  // 見えている幅に横並びで収まるかを判定。収まらない狭い画面では縦積みにする
+  const x1vis = outputs[0].x;
+  const fitsAcross = nCols * (maxGw + 16) <= (x1vis - x0) - 16;
+  if (fitsAcross){
+    const x1 = x1vis;
+    for (const g of lv.solution){
+      const nd = addNode(g.t, 0, 0);
+      const gw = nodeWidth(nd), gh = nodeHeight(nd);
+      const cx = x0 + (x1 - x0) * (g.c + 1) / (maxC + 2);
+      const cy = g.q.reduce((a, q) => a + inputs[q].y, 0) / g.q.length + nodeHeight(inputs[0]) / 2;
+      nd.x = cx - gw / 2;
+      nd.y = cy - gh / 2;
+      g.q.forEach((q, k) => {
+        wires.push({ id: uid(), fromPin: cursor[q], toPin: nd.inPins[k] });
+        cursor[q] = nd.outPins[k];
+      });
+    }
+  } else {
+    // 縦積みレイアウト：入力と出力のあいだの中央に、実行順で上から並べる
+    const cxMid = (x0 + x1vis) / 2;
+    let y = 30;
+    for (const g of lv.solution){
+      const nd = addNode(g.t, 0, 0);
+      nd.x = cxMid - nodeWidth(nd) / 2;
+      nd.y = y;
+      y += nodeHeight(nd) + 28;
+      g.q.forEach((q, k) => {
+        wires.push({ id: uid(), fromPin: cursor[q], toPin: nd.inPins[k] });
+        cursor[q] = nd.outPins[k];
+      });
+    }
+    const H0 = Number(svg.getAttribute('height')) || 0;
+    if (y + 16 > H0) svg.setAttribute('height', y + 16);
   }
   for (const o of outputs){
     wires.push({ id: uid(), fromPin: cursor[o.qidx], toPin: o.inPins[0] });
