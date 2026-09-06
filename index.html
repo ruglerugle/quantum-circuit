@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>量子回路クエスト ― 組んで学ぶ量子コンピュータの論理回路</title>
-<meta name="description" content="X・H・Z・CNOT・トフォリの量子ゲートを自分で並べて、重ね合わせ・干渉・もつれ、そして量子版の足し算回路まで体験できる無料の量子回路学習ゲーム。ブラウザだけで遊べます。">
+<meta name="description" content="X・H・Z・CNOT・トフォリ・CCZの量子ゲートを自分で配線して、重ね合わせ・干渉・もつれ・量子版の足し算、そしてグローバーの鍵探索まで体験できる無料の量子回路学習ゲーム。ブラウザだけで遊べます。">
 <link rel="canonical" href="https://ruglerugle.github.io/quantum-circuit/">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="量子回路クエスト">
@@ -19,11 +19,11 @@
   "@context": "https://schema.org",
   "@type": "LearningResource",
   "name": "量子回路クエスト",
-  "description": "X・H・Z・CNOT・トフォリの量子ゲートを自分で並べて、重ね合わせ・干渉・もつれ、そして量子版の足し算回路まで体験できる無料の量子回路学習ゲーム。",
+  "description": "X・H・Z・CNOT・トフォリ・CCZの量子ゲートを自分で配線して、重ね合わせ・干渉・もつれ・量子版の足し算、そしてグローバーの鍵探索まで体験できる無料の量子回路学習ゲーム。",
   "url": "https://ruglerugle.github.io/quantum-circuit/",
   "inLanguage": "ja",
   "learningResourceType": "learning activity",
-  "teaches": "量子回路と量子ゲートの仕組み（X・H・Z・CNOT・トフォリ・重ね合わせ・干渉・もつれ・可逆計算）",
+  "teaches": "量子回路と量子ゲートの仕組み（X・H・Z・CNOT・トフォリ・CCZ・重ね合わせ・干渉・もつれ・可逆計算・グローバーの探索）",
   "isAccessibleForFree": true,
   "author": { "@type": "Person", "name": "ruglerugle" }
 }
@@ -305,7 +305,7 @@ button{touch-action:manipulation;-webkit-tap-highlight-color:transparent}
           <span class="ch-title">🎉 COMPLETE</span>
           <span class="ch-heading">全レベルクリア！</span>
         </div>
-        <p class="game-intro">おめでとうございます。Xゲート1個から始めて、重ね合わせの足し算回路まで完走しました。</p>
+        <p class="game-intro">おめでとうございます。Xゲート1個から始めて、グローバーの探索まで完走しました。</p>
         <div class="dialog-scene" id="clear-dialog-1"></div>
         <div class="q-link-box" id="clear-flow-box"></div>
         <div class="dialog-scene" id="clear-dialog-2"></div>
@@ -370,7 +370,27 @@ const GATESPEC = {
   Z:    { pins:1, btn:'Z', w:46, fill:'#ece1fb', stroke:'#8a5ac4', short:'Z' },
   CNOT: { pins:2, btn:'CNOT ●—⊕', w:86, fill:'#e2f4f0', stroke:'#1b6e63', short:'CNOT', pinMarks:['●','⊕'] },
   CCX:  { pins:3, btn:'トフォリ ●●—⊕', w:86, fill:'#e2f4f0', stroke:'#1b6e63', short:'トフォリ', pinMarks:['●','●','⊕'] },
+  CCZ:  { pins:3, btn:'CCZ ●●●', w:86, fill:'#ece1fb', stroke:'#8a5ac4', short:'CCZ', pinMarks:['●','●','●'] },
 };
+
+// ====================== グローバー章の部品 ======================
+// 鍵は101（q0=A が最上位）。振幅の目標値（実数）
+const A8 = 1 / Math.sqrt(8);                  // 0.354
+const G1N = -1 / (2 * Math.sqrt(8));          // 1反復後の非鍵 −0.177
+const G1K = -5 / (2 * Math.sqrt(8));          // 1反復後の鍵 −0.884
+const G2N = -1 / (4 * Math.sqrt(8));          // 2反復後の非鍵 −0.088
+const G2K = 11 / (4 * Math.sqrt(8));          // 2反復後の鍵 0.972
+const T13 = [A8, A8, A8, A8, A8, -A8, A8, A8];
+const T14 = [G1N, G1N, G1N, G1N, G1N, G1K, G1N, G1N];
+const T15 = [G2N, G2N, G2N, G2N, G2N, G2K, G2N, G2N];
+// 回路部品（solution/preset用）
+const GV_H3 = c => [ {t:'H',q:[0],c}, {t:'H',q:[1],c}, {t:'H',q:[2],c} ];
+const GV_X3 = c => [ {t:'X',q:[0],c}, {t:'X',q:[1],c}, {t:'X',q:[2],c} ];
+const GV_ORACLE = c => [ {t:'X',q:[1],c:c}, {t:'CCZ',q:[0,1,2],c:c+1}, {t:'X',q:[1],c:c+2} ];
+const GV_DIFF = c => [ ...GV_H3(c), ...GV_X3(c+1), {t:'CCZ',q:[0,1,2],c:c+2}, ...GV_X3(c+3), ...GV_H3(c+4) ];
+const GV_L13 = [ ...GV_H3(0), ...GV_ORACLE(1) ];
+const GV_L14 = [ ...GV_L13, ...GV_DIFF(4) ];
+const GV_L15 = [ ...GV_L14, ...GV_ORACLE(9), ...GV_DIFF(12) ];
 
 // ====================== レベル定義 ======================
 // qubits: 量子ビット数（上の行が q0）。基底状態の番号は q0 を最上位ビットとする。
@@ -566,7 +586,7 @@ const LEVELS = [
     qubits: 3, labels: ["A","B","C"], gates: ["H","X","CNOT","CCX"],
     mode: "state", target: [0.5, 0, 0.5, 0, 0, 0.5, 0.5, 0],
     dialogue: [
-      { who:'cat', img:'cat', text:'最後のレベルだよ。いま作った半加算器の<strong>前</strong>で、AとBの両方にHをかけてみよう。' },
+      { who:'cat', img:'cat', text:'いま作った半加算器の<strong>前</strong>で、AとBの両方にHをかけてみよう。' },
       { who:'rabbit', img:'rabbitThink', text:'入力が重ね合わせになる……0+0、0+1、1+0、1+1の4通りが、全部同時に入るということですか？' },
       { who:'cat', img:'catThink', text:'そう。一覧表には4通りの足し算の答えが、0.5ずつの矢印で同時に並ぶ。「量子コンピュータは全部の答えを同時に計算する」と言われるときに起きているのは、まさにこれだよ。' },
       { who:'rabbit', img:'rabbit', text:'でも、測定して読み出せる答えは1回に1つだけ……どの答えが出るかも選べない。それなら4回計算し直すのと変わらない、というのが旅の結論でしたね。' },
@@ -574,6 +594,59 @@ const LEVELS = [
       { who:'rabbit', img:'rabbitThink', text:'一覧表で読むだけだった量子計算を、部品から全部この手で組めるようになりました。' },
     ],
     solution: [ {t:'H', q:[0], c:0}, {t:'H', q:[1], c:0}, {t:'CCX', q:[0,1,2], c:1}, {t:'CNOT', q:[0,1], c:2} ],
+  },
+  {
+    name: "オラクル：鍵101に印をつける",
+    label: "LEVEL 13", shortName: "オラクル",
+    desc: "H×3 で8本の矢印を立ててから、X → CCZ → X で鍵 |101⟩ の矢印だけ反転してください。目標：|101⟩ だけ −0.35、残りは ＋0.35。",
+    qlink: "オラクルは「候補が鍵と一致したときだけ矢印を反転する」固定の回路です。CCZ（3つ全部が1のときだけ矢印を反転する多重制御Z）と、鍵の0の桁をXで一時的に反転しておく組み合わせで、どんな鍵のオラクルも作れます。反転しても矢印の長さは変わらないので、印は測定の確率に一切現れません——見えない印（位相）だからこそ、このあとの干渉で利用できます。",
+    qubits: 3, labels: ["A","B","C"], gates: ["H","X","CCZ"],
+    canvasW: 660,
+    mode: "state", target: T13,
+    dialogue: [
+      { who:'cat', img:'cat', text:'ここからは総仕上げの章だよ。<a href="https://ruglerugle.github.io/grover-oracle/" target="_blank" rel="noopener">オラクルの旅</a>で仕組みを学んだ鍵探索を、今度は実物の回路で組んで動かそう。探す鍵は<strong>101</strong>。まずはオラクル——鍵の候補にだけ印をつける回路だよ。' },
+      { who:'rabbit', img:'rabbit', text:'復習します。オラクルは「入力が鍵と一致したときだけ矢印を反転する」固定の回路で、多重制御Zで作れるんでしたね。' },
+      { who:'cat', img:'catThink', text:'そう。今回は<strong>CCZ</strong>——3つ全部が1のときだけ矢印を反転するゲートを使う。ただし鍵101は真ん中が0だね。CCZをそのまま置くと、印がつくのは|111⟩になってしまう。' },
+      { who:'rabbit', img:'rabbitThink', text:'オラクルの旅でやった手ですね。Bを先にXで反転しておけば、101のときだけ「全部1」になってCCZが効きます。CCZのあとにもう一度Xで戻せば、B自体は元どおりです。' },
+      { who:'cat', img:'cat', text:'その通り。先にHを3つ置いて8本の矢印を立ててから、その印つけをつないでごらん。' },
+      { who:'rabbit', img:'rabbit', text:'印がついても長さは全部0.35のまま……測定の確率は8分の1ずつで変わらないんですよね。この見えない印をどう使うのか。' },
+    ],
+    solution: GV_L13,
+  },
+  {
+    name: "拡散：印を確率に変える",
+    label: "LEVEL 14", shortName: "拡散",
+    desc: "オラクルの後ろに拡散回路 H×3 → X×3 → CCZ → X×3 → H×3 をつないでください。目標：|101⟩ だけ長さ0.88（確率78%）、残りは長さ0.18。（オラクルまでは配置済み。矢印は全部左向きになりますが、全体の向きに意味はありません）",
+    qlink: "拡散は「すべての矢印を平均のまわりで折り返す」操作で、正体は「|000⟩だけ位相反転」をH×3で挟んだものです。真ん中の X×3→CCZ→X×3 が「000のときだけ反転」を作る——オラクルと同じ構造です。1反復で鍵の確率は 1/8 → 78% に育ちます。なお、この組み方では表全体の符号が反転しますが、全体の向き（グローバル位相）は測定に一切影響しないため、問題ありません。",
+    qubits: 3, labels: ["A","B","C"], gates: ["H","X","CCZ"],
+    canvasW: 1160,
+    mode: "state", target: T14,
+    dialogue: [
+      { who:'cat', img:'cat', text:'見えない印を確率に変える番だよ。使うのは<strong>拡散</strong>——すべての矢印を「平均のまわりで折り返す」操作。旅では一覧表の計算で追いかけたね。' },
+      { who:'rabbit', img:'rabbitThink', text:'平均折り返しなら、マイナス側にある鍵の矢印だけが反対へ大きく振れて、長く育つんでしたね。でも「平均で折り返す回路」を、HとXとCCZだけでどう組むんでしょう。' },
+      { who:'cat', img:'catThink', text:'拡散の正体は、<strong>「|000⟩だけ位相反転」をH×3で挟んだもの</strong>なんだ。順番に H×3 → X×3 → CCZ → X×3 → H×3。真ん中のX×3とCCZは「000のときだけ反転」——さっきのオラクルと同じ手だよ。' },
+      { who:'rabbit', img:'rabbit', text:'拡散もオラクルと同じ部品でできているんですね。オラクルの続きにつないでみます。' },
+      { who:'cat', img:'cat', text:'うまく組めると、|101⟩の矢印だけ長さ0.88——確率78%まで育つよ。矢印が全部左向きに変わるけれど、表全体の向きには意味がない。長さを見てごらん。' },
+    ],
+    preset: GV_L13,
+    solution: GV_L14,
+  },
+  {
+    name: "グローバー完成：94.5%で鍵を当てる",
+    label: "LEVEL 15", shortName: "グローバー",
+    desc: "オラクル → 拡散 をもう1回つないでください。目標：|101⟩ が長さ0.97（確率94.5%）。仕上げに測定で鍵を引き当てましょう。（1反復目までは配置済み）",
+    qlink: "最適な反復回数はおよそ (π/4)√N 回。8候補なら2回で94.5%に達します。回し過ぎると折り返しで逆に確率が下がります（3反復目を組んで確かめられます）。古典では平均4.5回・最悪8回の試行が必要なところ、グローバーは√N 回程度——2次加速です。何でも一瞬で解けるわけではない、という距離感まで含めて、これが量子探索の実力です。",
+    qubits: 3, labels: ["A","B","C"], gates: ["H","X","CCZ"],
+    canvasW: 1960,
+    mode: "state", target: T15,
+    dialogue: [
+      { who:'rabbit', img:'rabbit', text:'78%まで来ました。もう一押ししたいです。' },
+      { who:'cat', img:'cat', text:'同じ一手をもう1回だよ。オラクルで印をつけ直して、拡散で折り返す。これで|101⟩は0.97、確率94.5%になる。組み上げたら、測定で鍵を引き当ててごらん。' },
+      { who:'rabbit', img:'rabbitThink', text:'古典なら最悪8回、平均でも4回以上は試すところを、オラクル2回と測定1回でほぼ確実……重ね合わせと干渉が本当に仕事をしているんですね。' },
+      { who:'cat', img:'catThink', text:'そう。そして候補が増えても、必要な反復はおよそ√N回で済む。仕組みは、いま君が組んだこの回路と同じだよ。' },
+    ],
+    preset: GV_L14,
+    solution: GV_L15,
   },
 ];
 
@@ -657,9 +730,13 @@ function buildGateBar(){
   document.querySelectorAll('#gateBtns .gateBtn').forEach(btn => {
     btn.addEventListener('click', () => {
       const t = btn.dataset.gate;
+      const wrap = document.getElementById('canvasWrap');
       const W = Number(svg.getAttribute('width')) || 760;
       const H = Number(svg.getAttribute('height')) || 260;
-      addNode(t, W*0.30 + Math.random()*Math.max(80, W*0.22), 36 + Math.random()*Math.max(110, H-170));
+      // いまスクロールして見えている範囲の中に置く
+      const visW = Math.min(W, (wrap.clientWidth || W) - 2);
+      const sx = wrap.scrollLeft || 0;
+      addNode(t, sx + visW*0.30 + Math.random()*visW*0.28, 36 + Math.random()*Math.max(110, H-170));
       updateAll();
     });
   });
@@ -698,14 +775,14 @@ function pinPos(pin){
   return { x: pin.kind === 'in' ? node.x : node.x + w, y };
 }
 
-function resetCircuit(){
+function resetCircuit(skipPreset){
   nodes = []; pins = []; wires = [];
   wireStart = null; tempWireEnd = null; dragNode = null;
   const lv = LV();
   inputBits = new Array(lv.qubits).fill(0);
   const wrap = document.getElementById('canvasWrap');
   const minH = lv.qubits === 3 ? 340 : (lv.qubits === 2 ? 270 : 220);
-  const W = Math.max((wrap.clientWidth || 760) - 2, 560);
+  const W = Math.max((wrap.clientWidth || 760) - 2, 560, lv.canvasW || 0);
   const H = Math.max((wrap.clientHeight || 0) - 2, minH);
   svg.setAttribute('width', W);
   svg.setAttribute('height', H);
@@ -716,6 +793,8 @@ function resetCircuit(){
   const outX = Math.max(visW - 104, 250);
   lv.labels.forEach((name, i) => addNode('INPUT', 28, ys[i], {label:name, qidx:i}));
   lv.labels.forEach((name, i) => addNode('OUTPUT', outX, ys[i], {label:name, qidx:i}));
+  // 途中まで組んだ回路を最初から配置するレベル（グローバー章など）
+  if (lv.preset && !skipPreset) buildGateChain(lv.preset, false);
   hideNextBtn();
   document.getElementById('verifyWrap').classList.remove('visible');
   document.getElementById('measureResult').textContent = '';
@@ -885,6 +964,9 @@ function applyGate(s, type, qs, n){
   } else if (type === 'CCX'){
     const m1 = maskOf(qs[0], n), m2 = maskOf(qs[1], n), mt = maskOf(qs[2], n);
     for (let i = 0; i < N; i++) if ((i & m1) && (i & m2) && !(i & mt)){ const j = i | mt, t = s[i]; s[i] = s[j]; s[j] = t; }
+  } else if (type === 'CCZ'){
+    const m1 = maskOf(qs[0], n), m2 = maskOf(qs[1], n), m3 = maskOf(qs[2], n);
+    for (let i = 0; i < N; i++) if ((i & m1) && (i & m2) && (i & m3)) s[i] = -s[i];
   }
 }
 function ketStr(i, n){
@@ -1206,55 +1288,58 @@ document.getElementById('verifyClose').addEventListener('click', () => {
   document.getElementById('verifyWrap').classList.remove('visible');
 });
 
-// ====================== 解答 ======================
-// solution の {t, q:[量子ビット], c:列} を、スレッド順に自動配線して再現する
-document.getElementById('answerBtn').addEventListener('click', () => {
-  resetCircuit();
-  const lv = LV();
+// ====================== 解答・自動配置 ======================
+// {t, q:[量子ビット], c:列} の並びをスレッド順に自動配線して構築する。
+// wireOutputs=false なら出力へつながず途中で止める（プリセット用）
+function buildGateChain(list, wireOutputs){
   const inputs = nodes.filter(x => x.type === 'INPUT');
   const outputs = nodes.filter(x => x.type === 'OUTPUT');
   const cursor = inputs.map(x => x.outPins[0]);  // 量子ビットごとの「現在の出力ピン」
   const x0 = inputs[0].x + nodeWidth(inputs[0]);
-  const maxC = Math.max(...lv.solution.map(g => g.c));
-  const maxGw = Math.max(...lv.solution.map(g => GATESPEC[g.t].w));
-  const nCols = new Set(lv.solution.map(g => g.c)).size;
-  // 見えている幅に横並びで収まるかを判定。収まらない狭い画面では縦積みにする
-  const x1vis = outputs[0].x;
-  const fitsAcross = nCols * (maxGw + 16) <= (x1vis - x0) - 16;
-  if (fitsAcross){
-    const x1 = x1vis;
-    for (const g of lv.solution){
+  const wrap = document.getElementById('canvasWrap');
+  const visW = Math.min(Number(svg.getAttribute('width')) || 760, (wrap.clientWidth || 9999) - 2);
+  const chain = (g, nd) => {
+    g.q.forEach((q, k) => {
+      wires.push({ id: uid(), fromPin: cursor[q], toPin: nd.inPins[k] });
+      cursor[q] = nd.outPins[k];
+    });
+  };
+  if (visW >= 520){
+    // 横並び（列ごと）レイアウト
+    const COLW = 100;
+    for (const g of list){
       const nd = addNode(g.t, 0, 0);
-      const gw = nodeWidth(nd), gh = nodeHeight(nd);
-      const cx = x0 + (x1 - x0) * (g.c + 1) / (maxC + 2);
+      nd.x = x0 + 12 + g.c * COLW + (COLW - nodeWidth(nd)) / 2;
       const cy = g.q.reduce((a, q) => a + inputs[q].y, 0) / g.q.length + nodeHeight(inputs[0]) / 2;
-      nd.x = cx - gw / 2;
-      nd.y = cy - gh / 2;
-      g.q.forEach((q, k) => {
-        wires.push({ id: uid(), fromPin: cursor[q], toPin: nd.inPins[k] });
-        cursor[q] = nd.outPins[k];
-      });
+      nd.y = cy - nodeHeight(nd) / 2;
+      chain(g, nd);
     }
+    // 出力が回路の途中に埋まらないよう右へ寄せ、必要ならキャンバスも広げる
+    const maxC = Math.max(...list.map(g => g.c));
+    const lastX = x0 + 12 + (maxC + 1) * COLW;
+    outputs.forEach(o => { if (o.x < lastX + 24) o.x = lastX + 24; });
+    const needW = lastX + 156;
+    if (needW > Number(svg.getAttribute('width'))) svg.setAttribute('width', needW);
   } else {
-    // 縦積みレイアウト：入力と出力のあいだの中央に、実行順で上から並べる
-    const cxMid = (x0 + x1vis) / 2;
+    // 縦積みレイアウト（狭い画面）：入力と出力のあいだの中央に、実行順で上から並べる
+    const cxMid = (x0 + outputs[0].x) / 2;
     let y = 30;
-    for (const g of lv.solution){
+    for (const g of list){
       const nd = addNode(g.t, 0, 0);
       nd.x = cxMid - nodeWidth(nd) / 2;
       nd.y = y;
       y += nodeHeight(nd) + 28;
-      g.q.forEach((q, k) => {
-        wires.push({ id: uid(), fromPin: cursor[q], toPin: nd.inPins[k] });
-        cursor[q] = nd.outPins[k];
-      });
+      chain(g, nd);
     }
-    const H0 = Number(svg.getAttribute('height')) || 0;
-    if (y + 16 > H0) svg.setAttribute('height', y + 16);
+    if (y + 16 > (Number(svg.getAttribute('height')) || 0)) svg.setAttribute('height', y + 16);
   }
-  for (const o of outputs){
-    wires.push({ id: uid(), fromPin: cursor[o.qidx], toPin: o.inPins[0] });
+  if (wireOutputs){
+    for (const o of outputs) wires.push({ id: uid(), fromPin: cursor[o.qidx], toPin: o.inPins[0] });
   }
+}
+document.getElementById('answerBtn').addEventListener('click', () => {
+  resetCircuit(true);
+  buildGateChain(LV().solution, true);
   document.getElementById('status').textContent = '（解答例を表示中）';
   updateAll();
 });
@@ -1274,13 +1359,14 @@ function renderDialogue(dialogue){
 }
 
 const CLEAR_DIALOGUE_1 = [
-  { who:'cat',    img:'cat',        text:'ここまでの12レベルを並べ直してみよう。' },
+  { who:'cat',    img:'cat',        text:'ここまでの15レベルを並べ直してみよう。' },
   { who:'rabbit', img:'rabbit',     text:'前半は量子ビット1個でした。XとHとZ。それからH2個の打ち消しと、HとZだけでXが作れる話——位相が確率に化けるやつです。' },
-  { who:'cat',    img:'catThink',   text:'そう。後半はCNOTとトフォリで、論理回路の旅で作ったXOR・AND・半加算器を、情報を消さない形で作り直したね。まとめると——' },
+  { who:'cat',    img:'catThink',   text:'そう。後半はCNOTとトフォリで、論理回路の旅で作ったXOR・AND・半加算器を、情報を消さない形で作り直した。' },
+  { who:'rabbit', img:'rabbitThink', text:'そして最後の章では、オラクルと拡散を組んで、グローバーの探索で鍵101を確率94.5%まで追い込みました。まとめると——' },
 ];
 const CLEAR_DIALOGUE_2 = [
-  { who:'rabbit', img:'rabbitThink', text:'最後の重ね合わせ足し算が印象に残っています。4つの答えが一覧表に並んでいるのに、測定でもらえるのは1つだけなんですよね。' },
-  { who:'cat',    img:'cat',        text:'そう。だから量子コンピュータの本当の仕事は、位相と干渉で要らない答えを打ち消す回路を設計することなんだ。今日組んだゲートは、グローバーの探索にもショアの因数分解にも、そのまま部品として使われているよ。' },
+  { who:'rabbit', img:'rabbitThink', text:'重ね合わせ足し算では、4つの答えが並んでいても読み出せるのは1つだけでした。でもグローバーでは、干渉で欲しい答えの矢印を育ててから測りました。「干渉の設計」の意味が、手を動かしてようやくつながりました。' },
+  { who:'cat',    img:'cat',        text:'そう、それが干渉の設計だよ。今日組んだゲートは、ショアの因数分解にも誤り訂正にも、そのまま部品として使われている。' },
   { who:'rabbit', img:'rabbit',     text:'一覧表で読むだけだった量子計算を、自分の手で組めるようになりました。回路図が、ただの絵じゃなくて操作の手順書に見えます。' },
   { who:'cat',    img:'catThink',   text:'それが読めれば、論文に載っている量子回路も同じ文法だよ。おつかれさま。' },
 ];
@@ -1297,6 +1383,8 @@ function showClearScreen(){
     'CNOT・トフォリ → XOR・ANDの「消さない」版<br>' +
     'トフォリ＋CNOT → 量子版・半加算器<br>' +
     'H＋半加算器 → 4通りの足し算が同時に一覧表へ。でも読み出せるのは1つ<br>' +
+    'H・X・CCZ → オラクル（見えない印）と拡散（平均折り返し）<br>' +
+    '（オラクル→拡散）×2反復 → グローバーの探索：8候補から鍵を94.5%で発見<br>' +
     '<strong>だから量子計算の速さは「干渉の設計」で決まる</strong>' +
     '<hr style="margin:12px 0;border-color:rgba(0,0,0,.15)">' +
     '<small>この12レベルで組んだゲート（X・H・Z・CNOT・トフォリ）に位相回転を加えた数種類だけで、' +
