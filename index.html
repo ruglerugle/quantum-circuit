@@ -1044,8 +1044,18 @@ svg.addEventListener('pointerdown', (e) => {
   const nodeEl = e.target.closest ? e.target.closest('[data-nodeid]') : null;
   if (nodeEl){
     e.preventDefault();
+    const nd = getNode(Number(nodeEl.dataset.nodeid));
+    // 入力ノードはドラッグせず、押した瞬間に0/1を切り替える（指タップでも確実に反応させる）
+    if (nd.type === 'INPUT'){
+      if (LV().mode === 'unitary'){
+        inputBits[nd.qidx] = inputBits[nd.qidx] ? 0 : 1;
+        document.getElementById('measureResult').textContent = '';
+        updateAll();
+      }
+      return;
+    }
     svg.setPointerCapture(e.pointerId);
-    startNodeDrag(getNode(Number(nodeEl.dataset.nodeid)), e.clientX, e.clientY);
+    startNodeDrag(nd, e.clientX, e.clientY);
     return;
   }
   if (wireStart){ wireStart = null; tempWireEnd = null; render(); }
@@ -1066,12 +1076,7 @@ svg.addEventListener('pointermove', (e) => {
 svg.addEventListener('pointerup', (e) => {
   try { svg.releasePointerCapture(e.pointerId); } catch(_){}
   if (dragNode){
-    const n = dragNode;
     dragNode = null;
-    if (!dragMoved && n.type === 'INPUT' && LV().mode === 'unitary'){
-      inputBits[n.qidx] = inputBits[n.qidx] ? 0 : 1;
-      document.getElementById('measureResult').textContent = '';
-    }
     updateAll();
     return;
   }
