@@ -114,6 +114,11 @@ a.head-btn{text-decoration:none;display:inline-flex;align-items:center;justify-c
 .ch-heading{display:inline;font-size:20px;font-weight:950;color:#1b2340}
 .game-intro{border-top:1px solid #c9d2e4;padding-top:9px;margin-top:8px;font-size:15px;color:#1b2340;line-height:1.7;font-weight:780}
 .q-link-box{background:#eef3fb;border:1px solid #a3b6d9;border-left:4px solid #2e5fd1;border-radius:6px;padding:10px 13px;font-size:13px;color:#1c2c55;margin:12px 0;line-height:1.7;font-weight:780}
+.goal-box{background:#fdf9ec;border:1px solid #d9c27a;border-left:4px solid #d4a017;border-radius:6px;padding:10px 13px;font-size:13px;color:#4a3a10;margin:12px 0;line-height:1.7;font-weight:780}
+.goal-box table{border-collapse:collapse;margin:8px 0 4px;background:#fff}
+.goal-box th,.goal-box td{border:1px solid #d9c27a;padding:3px 12px;text-align:center;font-size:12.5px;font-weight:800;color:#1b2340;font-family:ui-monospace,'Cascadia Code',monospace}
+.goal-box th{background:#f4e9c8;font-family:inherit}
+.goal-box .goal-note{font-size:12px;color:#7a6320;font-weight:750}
 .q-link-box strong{color:#12245e}
 .intro-actions{display:flex;justify-content:flex-end;margin-top:16px;gap:10px}
 .book-recommend-box{margin:12px 0;background:#f6f4ee;border:1px solid rgba(0,0,0,.13);border-radius:10px;padding:10px 14px}
@@ -284,6 +289,7 @@ button{touch-action:manipulation;-webkit-tap-highlight-color:transparent}
           <span class="ch-heading" id="intro-title"></span>
         </div>
         <p class="game-intro" id="intro-desc"></p>
+        <div id="goal-area"></div>
         <div class="dialog-scene" id="dialog-scene"></div>
         <div id="q-link-area"></div>
         <div class="intro-actions">
@@ -400,7 +406,7 @@ const LEVELS = [
   {
     name: "Xゲート：0と1を入れ替える",
     label: "LEVEL 1", shortName: "X",
-    desc: "A の入力と出力のあいだに X をつないで、|0⟩ を |1⟩ にしてください。（|0⟩は「ゼロの状態」と読む記号です）",
+    desc: "量子ビット A は |0⟩（「ゼロの状態」と読む記号）で入力されます。A の入力と出力のあいだに X を1個つないで、出力が |1⟩ になる回路を作ってください。つなぎ方：入力Aの出力ピン → Xの入力ピン → Xの出力ピン → 出力Aの入力ピン。",
     qlink: "|0⟩・|1⟩ は量子ビットの状態を表す記号で、「ゼロの状態」「イチの状態」と読みます。量子コンピュータの状態は「答え候補ごとに矢印が1本ずつ並んだ一覧表」で表され、矢印の長さの2乗が、その候補が測定で出る確率です。Xゲートは0と1の行の矢印を入れ替えるだけの、いちばん古典に近いゲートです。",
     qubits: 1, labels: ["A"], gates: ["X"],
     mode: "state", target: [0, 1],
@@ -415,7 +421,7 @@ const LEVELS = [
   {
     name: "もう一度X：量子ゲートは可逆",
     label: "LEVEL 2", shortName: "可逆性",
-    desc: "X を2個並べて、|0⟩ → |1⟩ → |0⟩ と往復させてください。",
+    desc: "入力は |0⟩ です。X を2個直列につないで |0⟩→|1⟩→|0⟩ と往復させ、出力を |0⟩ に戻してください。何もつながなくても |0⟩ のままですが、このレベルは「Xを2個以上使うこと」が条件です。",
     qlink: "量子ゲートはすべて「やり直しがきく（可逆）」変換です。古典のANDゲートは出力が0のとき入力が00・01・10のどれだったか分からなくなります（情報が消える）が、量子の計算では矢印の長さの合計を保つ入れ替え・回転しか許されないため、情報は決して消えません。この可逆性が、後で作る量子版の論理回路の形を決めます。",
     qubits: 1, labels: ["A"], gates: ["X"],
     mode: "state", target: [1, 0],
@@ -432,7 +438,7 @@ const LEVELS = [
   {
     name: "Hゲート：重ね合わせを作る",
     label: "LEVEL 3", shortName: "H",
-    desc: "H を置いて、|0⟩ と |1⟩ に √2分の1（約0.71）ずつの重ね合わせを作ってください。",
+    desc: "入力は |0⟩ です。H を1個つないで、|0⟩ と |1⟩ に √2分の1（約0.71）ずつの矢印が並ぶ重ね合わせを作ってください。",
     qlink: "H（アダマール）ゲートは重ね合わせを作る基本ゲートです。|0⟩ を「|0⟩へ√2分の1、|1⟩へ√2分の1」に分けます。0.71の2乗＝0.5 なので、測定すると半々の確率で0か1が出ます。確率の合計がちょうど1のままになるように、√2分の1という長さが選ばれています。",
     qubits: 1, labels: ["A"], gates: ["X","H"],
     mode: "state", target: [Math.SQRT1_2, Math.SQRT1_2],
@@ -447,7 +453,7 @@ const LEVELS = [
   {
     name: "H×2：干渉で元に戻る",
     label: "LEVEL 4", shortName: "干渉",
-    desc: "H を2個並べて、|0⟩ に戻る回路を作ってください。",
+    desc: "入力は |0⟩ です。H を2個直列につないで、出力を |0⟩ に戻してください（Hを2個以上使うことが条件）。1個目のHで作った半々の重ね合わせが、2個目のHで元に戻ることを確かめるレベルです。",
     qlink: "Hをもう一度かけると、|1⟩へ向かう2本の道筋の矢印が右向きと左向きで打ち消し合い、状態は|0⟩に戻ります。これが干渉です。「重ね合わせを作って、干渉で戻す・絞る」が量子アルゴリズム全体の基本パターンです。",
     qubits: 1, labels: ["A"], gates: ["X","H"],
     mode: "state", target: [1, 0],
@@ -463,7 +469,7 @@ const LEVELS = [
   {
     name: "Zゲート：見えない向き（位相）",
     label: "LEVEL 5", shortName: "Z",
-    desc: "H と Z を使って、|0⟩ に +0.71、|1⟩ に −0.71 の状態を作ってください。",
+    desc: "入力は |0⟩ です。H と Z を組み合わせて、|0⟩ に＋0.71、|1⟩ に−0.71 の矢印が並ぶ状態を作ってください。Z は |1⟩ の行の矢印の向きだけを反転するゲートです（|1⟩ に矢印がない状態にかけても、何も起きません）。",
     qlink: "Zゲートは|1⟩の矢印の向きだけを反転します。矢印の長さ（＝確率）は変わらないので、測定だけでは +0.71 と −0.71 の違いは見えません。この「向き」の情報を位相と呼びます。見えないのに計算の中では本物の違いとして働く——それを次のレベルで確かめます。",
     qubits: 1, labels: ["A"], gates: ["X","H","Z"],
     mode: "state", target: [Math.SQRT1_2, -Math.SQRT1_2],
@@ -479,7 +485,7 @@ const LEVELS = [
   {
     name: "HZH＝X：位相が確率に化ける",
     label: "LEVEL 6", shortName: "HZH=X",
-    desc: "X を使わずに、H と Z だけで「Xと同じ動き」（|0⟩→|1⟩、|1⟩→|0⟩）を作ってください。ヒント：3個で作れます。",
+    desc: "X を使わずに、H と Z だけで「Xと同じ動き」をする回路を作ってください。合格条件：入力が |0⟩ なら出力 |1⟩、入力が |1⟩ なら出力 |0⟩（両方の入力で検証します）。ヒント：3個で作れます。",
     qlink: "H→Z→H と並べると、Xと全く同じ動きになります（HZH＝X）。測定では見えない位相の違いが、最後のHの干渉を通して「どちらが打ち消されるか」を入れ替え、確率の違いに変換されるからです。位相を操作して干渉の結果を設計する——グローバーの探索もショアの因数分解も、この原理の大規模版です。",
     qubits: 1, labels: ["A"], gates: ["H","Z"],
     mode: "unitary", targetMap: i => i ^ 1,
@@ -495,7 +501,7 @@ const LEVELS = [
   {
     name: "CNOT：可逆なXOR",
     label: "LEVEL 7", shortName: "CNOT",
-    desc: "CNOT を1個置いて、「Aが1のときだけBが反転する」回路を作ってください（制御＝A、標的＝B）。4通りの入力すべてで確かめます。",
+    desc: "CNOT を1個つないで、「Aが1のときだけBが反転する」回路を作ってください。つなぎ方：●（制御）のピンをAの線に、⊕（標的）のピンをBの線に。4通りの入力すべてで、A はそのまま・B は「AとBのXOR」になれば合格です。",
     qlink: "CNOTは2量子ビットゲートの基本で、制御（●）が1のときだけ標的（⊕）にXをかけます。標的の出力は A⊕B（AとBのXOR）そのもの。ただし古典のXORゲートと違って入力Aも手元に残るので、情報が消えません。XORの可逆版です。",
     qubits: 2, labels: ["A","B"], gates: ["CNOT"],
     mode: "unitary", targetMap: i => { const a=(i>>1)&1; return a ? (i^1) : i; },
@@ -511,7 +517,7 @@ const LEVELS = [
   {
     name: "ベル状態：もつれを作る",
     label: "LEVEL 8", shortName: "ベル状態",
-    desc: "H と CNOT で、|00⟩ に 0.71・|11⟩ に 0.71・残りは 0 のもつれ状態（ベル状態）を作ってください。",
+    desc: "入力は |00⟩ です。H と CNOT を使って、|00⟩ に0.71・|11⟩ に0.71・残りは0の「ベル状態」（測ると必ず両方同じ値になる、もつれの代表例）を作ってください。",
     qlink: "この状態はベル状態と呼ばれ、もつれの代表例です。測定すると00か11が半々で出ますが、2つの量子ビットは必ず同じ値になります。片方だけ見ると完全にランダムなのに、2つの間には完全な相関がある——ベルの不等式の実験で「世界は局所実在論では説明できない」ことを示した主役が、この2ゲートで作れます。",
     qubits: 2, labels: ["A","B"], gates: ["X","H","Z","CNOT"],
     mode: "state", target: [Math.SQRT1_2, 0, 0, Math.SQRT1_2],
@@ -527,7 +533,7 @@ const LEVELS = [
   {
     name: "SWAPを自作する",
     label: "LEVEL 9", shortName: "SWAP",
-    desc: "CNOT を3個使って、A と B の中身をそっくり入れ替える回路（SWAP）を作ってください。（配線を交差させて反対側の出力へ直結するのは不可です）",
+    desc: "CNOT だけを3個使って、A と B の中身をそっくり入れ替える回路（SWAP）を作ってください。4通りの入力すべてで、出力A＝入力B、出力B＝入力A になれば合格です。配線を交差させて反対側の出力へ直結するのは不可です。",
     qlink: "SWAPはCNOT3個で作れます。A⊕Bを作って往復させると、メモ用の置き場所を使わずに2つの値が入れ替わります。実物の量子コンピュータでは離れた量子ビットどうしを直接つなげないことが多く、SWAPで値を隣へ隣へと運びます。ちなみに古典回路でも同じ手（XOR3回の入れ替え）が使えます。",
     qubits: 2, labels: ["A","B"], gates: ["CNOT"],
     mode: "unitary", targetMap: i => ((i&1)<<1) | ((i>>1)&1),
@@ -547,7 +553,7 @@ const LEVELS = [
   {
     name: "トフォリ：可逆なAND",
     label: "LEVEL 10", shortName: "トフォリ",
-    desc: "トフォリ（制御2つのCNOT）を置いて、「AとBが両方1のときだけCが反転する」回路を作ってください。8通りの入力すべてで確かめます。",
+    desc: "トフォリ（制御が2個のCNOT）を1個つないで、「AとBが両方1のときだけCが反転する」回路を作ってください。つなぎ方：●2個をAとBの線に、⊕をCの線に。8通りの入力すべてで確かめます。",
     qlink: "トフォリゲートは制御が2個あるCNOTです。Cを最初に0にしておくと、通過後のCは「AとBが両方1のときだけ1」＝AND(A,B) になります。出力から入力を復元できないANDを、入力を残したまま実行する可逆版。古典回路でNANDが万能ゲートだったように、トフォリは可逆計算の万能ゲートです。",
     qubits: 3, labels: ["A","B","C"], gates: ["CNOT","CCX"],
     mode: "unitary", targetMap: i => { const a=(i>>2)&1, b=(i>>1)&1; return (a&&b) ? (i^1) : i; },
@@ -563,7 +569,7 @@ const LEVELS = [
   {
     name: "量子版・半加算器",
     label: "LEVEL 11", shortName: "半加算器",
-    desc: "CNOT とトフォリで半加算器を作ってください。目標：Aはそのまま、Bの場所に SUM（A⊕B）、Cの場所に CARRY（AとBのAND）。C=0 の4通りの入力で確かめます。",
+    desc: "1桁の2進数どうしの足し算 A＋B を回路にします。答えは最大2桁（1＋1＝10）なので、下の桁を SUM（＝AとBのXOR）、繰り上がりを CARRY（＝AとBのAND）と呼びます。CNOT とトフォリを使って、出力が「A：そのまま／B：SUM／C：CARRY」になる回路を作ってください。C は0で入力される空きビットで、答えは C B の2桁として読めます。ヒント：置く順番に注意（まだ使う値を上書きしない）。",
     qlink: "XOR＝CNOT、AND＝トフォリ。論理回路で作れるものは、すべて量子回路でも作れます（量子回路は古典回路の上位互換です）。ただし可逆計算では「まだ使う値を上書きしない」順序設計が必要です。ショアのアルゴリズムの中で走る「2のx乗を割った余り」の計算も、こうして組んだ可逆な算術回路です。",
     qubits: 3, labels: ["A","B","C"], gates: ["CNOT","CCX"],
     mode: "unitary",
@@ -581,7 +587,7 @@ const LEVELS = [
   {
     name: "重ね合わせで足し算",
     label: "LEVEL 12", shortName: "重ね合わせ計算",
-    desc: "A と B に H をかけてから半加算器（トフォリ→CNOT）をつなぎ、4通りの足し算の答えが同時に並ぶ一覧表（0.5 の矢印が4本）を作ってください。",
+    desc: "レベル11の半加算器（トフォリ→CNOT）の前で、A と B に H を1個ずつかけて、4通りの入力の重ね合わせを作ってください。0+0・0+1・1+0・1+1 の4通りの計算結果（A・SUM・CARRY の並び）に、0.5ずつの矢印が同時に並べば合格です。",
     qlink: "重ね合わせの入力に半加算器をかけると、0+0・0+1・1+0・1+1 の4通りの計算結果が1枚の一覧表に同時に並びます。ただし測定で読み出せるのは1つだけで、どれが出るかは選べません。だから重ね合わせだけでは速くならず、位相と干渉で欲しい答えに矢印を集める設計（レベル6の原理）が必要になります。ここまで組んだH・Z・CNOT・トフォリは、その設計の全材料です。",
     qubits: 3, labels: ["A","B","C"], gates: ["H","X","CNOT","CCX"],
     mode: "state", target: [0.5, 0, 0.5, 0, 0, 0.5, 0.5, 0],
@@ -598,7 +604,7 @@ const LEVELS = [
   {
     name: "オラクル：鍵101に印をつける",
     label: "LEVEL 13", shortName: "オラクル",
-    desc: "H×3 で8本の矢印を立ててから、X → CCZ → X で鍵 |101⟩ の矢印だけ反転してください。目標：|101⟩ だけ −0.35、残りは ＋0.35。",
+    desc: "探す鍵は 101 です。まず A・B・C に H を1個ずつかけて8通りの候補すべてに0.35ずつの矢印を立て、その後ろに X → CCZ → X をつないで、鍵 |101⟩ の矢印だけを反転してください。X は真ん中のBの線に（鍵の0の桁）、CCZ は3本全部の線につなぎます。",
     qlink: "オラクルは「候補が鍵と一致したときだけ矢印を反転する」固定の回路です。CCZ（3つ全部が1のときだけ矢印を反転する多重制御Z）と、鍵の0の桁をXで一時的に反転しておく組み合わせで、どんな鍵のオラクルも作れます。反転しても矢印の長さは変わらないので、印は測定の確率に一切現れません——見えない印（位相）だからこそ、このあとの干渉で利用できます。",
     qubits: 3, labels: ["A","B","C"], gates: ["H","X","CCZ"],
     canvasW: 660,
@@ -616,7 +622,7 @@ const LEVELS = [
   {
     name: "拡散：印を確率に変える",
     label: "LEVEL 14", shortName: "拡散",
-    desc: "オラクルの後ろに拡散回路 H×3 → X×3 → CCZ → X×3 → H×3 をつないでください。目標：|101⟩ だけ長さ0.88（確率78%）、残りは長さ0.18。（オラクルまでは配置済み。矢印は全部左向きになりますが、全体の向きに意味はありません）",
+    desc: "オラクルまでは配置済みです。その後ろに拡散回路を、この順番で全部つないでください：H×3 → X×3 → CCZ → X×3 → H×3（X×3・H×3 は A・B・C の3本の線に1個ずつ）。完成すると |101⟩ の矢印だけ長さ0.88（確率78%）に育ちます。矢印は全部左向きになりますが、表全体の向きに意味はありません。",
     qlink: "拡散は「すべての矢印を平均のまわりで折り返す」操作で、正体は「|000⟩だけ位相反転」をH×3で挟んだものです。真ん中の X×3→CCZ→X×3 が「000のときだけ反転」を作る——オラクルと同じ構造です。1反復で鍵の確率は 1/8 → 78% に育ちます。なお、この組み方では表全体の符号が反転しますが、全体の向き（グローバル位相）は測定に一切影響しないため、問題ありません。",
     qubits: 3, labels: ["A","B","C"], gates: ["H","X","CCZ"],
     canvasW: 1160,
@@ -634,7 +640,7 @@ const LEVELS = [
   {
     name: "グローバー完成：94.5%で鍵を当てる",
     label: "LEVEL 15", shortName: "グローバー",
-    desc: "オラクル → 拡散 をもう1回つないでください。目標：|101⟩ が長さ0.97（確率94.5%）。仕上げに測定で鍵を引き当てましょう。（1反復目までは配置済み）",
+    desc: "1反復目までは配置済みです。その後ろに2反復目を、この順番でつないでください：オラクル（X → CCZ → X、XはBの線）→ 拡散（H×3 → X×3 → CCZ → X×3 → H×3）。完成すると |101⟩ が長さ0.97（確率94.5%）になります。仕上げに測定で鍵を引き当てましょう。",
     qlink: "最適な反復回数はおよそ (π/4)√N 回。8候補なら2回で94.5%に達します。回し過ぎると折り返しで逆に確率が下がります（3反復目を組んで確かめられます）。古典では平均4.5回・最悪8回の試行が必要なところ、グローバーは√N 回程度——2次加速です。何でも一瞬で解けるわけではない、という距離感まで含めて、これが量子探索の実力です。",
     qubits: 3, labels: ["A","B","C"], gates: ["H","X","CCZ"],
     canvasW: 1960,
@@ -695,7 +701,10 @@ function loadLevel(idx){
 
   document.getElementById('intro-label').textContent = lv.label;
   document.getElementById('intro-title').textContent = lv.name;
-  document.getElementById('intro-desc').textContent = '🎯 ' + lv.desc;
+  document.getElementById('intro-desc').textContent = '📋 ' + lv.desc;
+  // 合格条件の表（検証と同じ目標を問題文として提示する）
+  document.getElementById('goal-area').innerHTML =
+    `<div class="goal-box"><strong>🎯 合格条件</strong>（「▶ 検証する」でこの表と比べます）${goalTableHTML(lv)}</div>`;
   document.getElementById('dialog-scene').innerHTML = renderDialogue(lv.dialogue);
   document.getElementById('q-link-area').innerHTML = lv.qlink
     ? `<div class="q-link-box">⚛ <strong>量子コンピュータとのつながり</strong><br>${lv.qlink}</div>` : '';
@@ -706,6 +715,28 @@ function loadLevel(idx){
   document.getElementById('status').textContent = '';
   hideNextBtn();
   showIntro();
+}
+
+// レベルの合格条件をイントロ用の表にする
+function goalTableHTML(lv){
+  const n = lv.qubits;
+  if (lv.mode === 'unitary'){
+    const ins = lv.testInputs || Array.from({ length: 1 << n }, (_, i) => i);
+    let h = '<table><tr><th>入力</th><th>出力（目標）</th></tr>';
+    for (const i of ins) h += `<tr><td>|${ketStr(i, n)}⟩</td><td>|${ketStr(lv.targetMap(i), n)}⟩</td></tr>`;
+    h += '</table>';
+    h += '<span class="goal-note">上のすべての入力パターンで、出力がこの表と一致すれば合格です。入力は左端の入力ノードをタップして切り替えて試せます。</span>';
+    return h;
+  }
+  let h = '<table><tr><th>答え候補</th><th>目標の矢印</th><th>確率</th></tr>';
+  for (let i = 0; i < lv.target.length; i++){
+    const a = lv.target[i];
+    const p = Math.round(a * a * 1000) / 10;
+    h += `<tr><td>|${ketStr(i, n)}⟩</td><td>${fmtAmp(a)}</td><td>${p}%</td></tr>`;
+  }
+  h += '</table>';
+  h += '<span class="goal-note">入力 |' + '0'.repeat(n) + '⟩ から出発して、この矢印の一覧表を作れば合格です（表全体の向きの反転は同じものとみなします）。</span>';
+  return h;
 }
 
 function buildLevelList(){
