@@ -352,7 +352,7 @@ button{touch-action:manipulation;-webkit-tap-highlight-color:transparent}
             <div id="ampTable"></div>
             <button id="measureBtn">🎲 測定してみる</button>
             <div id="measureResult"></div>
-            <div class="sp-note">確率＝矢印の長さの2乗。測定は何度でも試せますが、実物の量子コンピュータでは測定すると状態は壊れ、答えは1回につき1つしか読み出せません。</div>
+            <div class="sp-note">表の各行は「測定したときに出力に現れる可能性のある0/1の並び（答え候補）」。確率＝矢印の長さの2乗。測定は何度でも試せますが、実物の量子コンピュータでは測定すると状態は壊れ、答えは1回につき1つしか読み出せません。</div>
           </aside>
         </div>
       </div>
@@ -1226,8 +1226,8 @@ document.getElementById('runBtn').addEventListener('click', () => {
     let dot = 0;
     for (let i = 0; i < s.length; i++) dot += s[i] * t[i];
     const sign = dot < 0 ? -1 : 1;
-    html = '<p class="verify-note">このレベルの目標は「矢印の一覧表」を作ることです。答え候補（0/1の並び）の行ごとに、'
-      + 'あなたの回路が作った矢印と目標の矢印を比べます。数値は矢印の長さと向き（＋＝右向き、−＝左向き、長さの2乗が確率）。</p>'
+    html = '<p class="verify-note">このレベルの目標は「矢印の一覧表」を作ることです。表の各行は答え候補——測定したときに出力に現れる可能性のある0/1の並び——で、'
+      + '行ごとにあなたの回路が作った矢印と目標の矢印を比べます。数値は矢印の長さと向き（＋＝右向き、−＝左向き、長さの2乗がその並びが出る確率）。</p>'
       + '<table><tr><th>答え候補</th><th>回路が作った矢印</th><th>目標の矢印</th></tr>';
     for (let i = 0; i < s.length; i++){
       const a = s[i] * sign;
