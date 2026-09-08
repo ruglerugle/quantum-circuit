@@ -377,6 +377,7 @@ const GATESPEC = {
   CNOT: { pins:2, btn:'CNOT ●—⊕', w:86, fill:'#e2f4f0', stroke:'#1b6e63', short:'CNOT', pinMarks:['●','⊕'] },
   CCX:  { pins:3, btn:'トフォリ ●●—⊕', w:86, fill:'#e2f4f0', stroke:'#1b6e63', short:'トフォリ', pinMarks:['●','●','⊕'] },
   CCZ:  { pins:3, btn:'CCZ ●●●', w:86, fill:'#ece1fb', stroke:'#8a5ac4', short:'CCZ', pinMarks:['●','●','●'] },
+  ORACLE: { pins:3, btn:'？オラクル（封印）', w:86, fill:'#3a3f52', stroke:'#191d2c', short:'？', dark:true },
 };
 
 // ====================== グローバー章の部品 ======================
@@ -397,6 +398,8 @@ const GV_DIFF = c => [ ...GV_H3(c), ...GV_X3(c+1), {t:'CCZ',q:[0,1,2],c:c+2}, ..
 const GV_L13 = [ ...GV_H3(0), ...GV_ORACLE(1) ];
 const GV_L14 = [ ...GV_L13, ...GV_DIFF(4) ];
 const GV_L15 = [ ...GV_L14, ...GV_ORACLE(9), ...GV_DIFF(12) ];
+// L16: 封印オラクル（鍵はランダム）を使ったグローバー2反復
+const GV_L16 = [ ...GV_H3(0), {t:'ORACLE',q:[0,1,2],c:1}, ...GV_DIFF(2), {t:'ORACLE',q:[0,1,2],c:7}, ...GV_DIFF(8) ];
 
 // ====================== レベル定義 ======================
 // qubits: 量子ビット数（上の行が q0）。基底状態の番号は q0 を最上位ビットとする。
@@ -654,6 +657,25 @@ const LEVELS = [
     preset: GV_L14,
     solution: GV_L15,
   },
+  {
+    name: "覆面オラクル：知らない鍵を探す",
+    label: "LEVEL 16", shortName: "覆面オラクル",
+    desc: "オラクルの中身が見えなくなりました。？オラクルは「隠された鍵（3桁の0/1）と一致した候補の矢印だけを反転する」封印済みの判定回路で、鍵はランダムに決まっています（あなたにも見えません）。H×3 → ？オラクル → 拡散 → ？オラクル → 拡散 と組んで、隠れた鍵の確率を90%以上に育ててください。？オラクルは3本の線を上から順（A・B・C）につなぎます。先に測定で鍵を予想してから、検証で答え合わせをしましょう。",
+    qlink: "これが本来のグローバーの姿です。鍵に依存する部品は封印されたオラクル（検算箱）だけで、H×3も拡散も鍵と無関係——だから鍵を知らない人でも回路全体を組めます。現実の鍵探索では「候補の鍵で暗号化して、手元の暗号文と一致するか」を調べる回路がこのオラクルにあたり、作った本人も鍵を知りません。なお、矢印の一覧表は「神様視点」です。オラクル1回の直後に左向きになった行を目で読めば鍵は分かってしまいますが、実機で見えるのは測定結果だけなので、その手は現実には使えません。測定でちゃんと当てられる形まで矢印を育てるのがグローバーの仕事です。",
+    qubits: 3, labels: ["A","B","C"], gates: ["H","X","CCZ","ORACLE"],
+    canvasW: 1580,
+    mode: "mystery",
+    goalHTML: "：封印オラクルの隠れた鍵について、その答え候補の確率を<strong>90%以上</strong>に育てること。「▶ 検証する」で鍵の発表と答え合わせをします。回路を組み直すたびに鍵はランダムに変わりますが、同じ形の回路のままで通用するはずです。",
+    dialogue: [
+      { who:'rabbit', img:'rabbitThink', text:'博士、引っかかっていることがあります。わたしたちは鍵が101だと知っていて、その鍵に合わせてオラクルを組みました。それだと「最初から答えを知っていた」ことになる気がします。どこからが、鍵を知らない探索なんでしょうか。' },
+      { who:'cat', img:'cat', text:'いい質問だね。鍵になるのは、オラクルが「鍵を知っている箱」ではなく<strong>「候補を検算できる箱」</strong>だという点だよ。オラクルの旅を思い出してごらん。攻撃者は平文と暗号文のペアを持っていて、「候補の鍵で暗号化して一致するかを調べる回路」は、鍵を知らなくても組めたね。' },
+      { who:'rabbit', img:'rabbit', text:'はい。暗号化の手順は公開されているから、判定回路そのものは誰でも作れる。作った本人も、どの候補で一致が出るかは知らないんでしたね。' },
+      { who:'cat', img:'catThink', text:'そう。そしてもう1つ気づいてほしい。レベル14で組んだ<strong>拡散回路は、鍵に全く依存しない</strong>。鍵の情報が入っているのはオラクルだけなんだ。そこで今回は、中身を封印した「？オラクル」を渡すよ。鍵はランダムに決まっていて、私も君も知らない。' },
+      { who:'rabbit', img:'rabbitThink', text:'知らない鍵を、H×3と拡散——鍵と無関係な部品だけ——で挟んで、あぶり出せるかどうか、ということですね。' },
+      { who:'cat', img:'cat', text:'そう。組み上げたら、先に測定で鍵を予想してから答え合わせをしてごらん。鍵を取り替えても、回路は同じ形のままで通用するはずだよ。' },
+    ],
+    solution: GV_L16,
+  },
 ];
 
 // ====================== 状態 ======================
@@ -664,6 +686,7 @@ let idc = 1;
 let dragNode = null, dragOffset = {x:0,y:0}, dragMoved = false;
 let wireStart = null, tempWireEnd = null;
 let inputBits = [];   // unitaryレベルの入力切り替え（量子ビットごとに0/1）
+let mysteryKey = 0;   // 覆面オラクルの隠し鍵（mysteryレベルで回路リセットごとにランダム）
 
 const svg = document.getElementById('svg');
 
@@ -703,8 +726,9 @@ function loadLevel(idx){
   document.getElementById('intro-title').textContent = lv.name;
   document.getElementById('intro-desc').textContent = '📋 ' + lv.desc;
   // 合格条件の表（検証と同じ目標を問題文として提示する）
-  document.getElementById('goal-area').innerHTML =
-    `<div class="goal-box"><strong>🎯 合格条件</strong>（「▶ 検証する」でこの表と比べます）${goalTableHTML(lv)}</div>`;
+  document.getElementById('goal-area').innerHTML = lv.goalHTML
+    ? `<div class="goal-box"><strong>🎯 合格条件</strong>${lv.goalHTML}</div>`
+    : `<div class="goal-box"><strong>🎯 合格条件</strong>（「▶ 検証する」でこの表と比べます）${goalTableHTML(lv)}</div>`;
   document.getElementById('dialog-scene').innerHTML = renderDialogue(lv.dialogue);
   document.getElementById('q-link-area').innerHTML = lv.qlink
     ? `<div class="q-link-box">⚛ <strong>量子コンピュータとのつながり</strong><br>${lv.qlink}</div>` : '';
@@ -811,6 +835,7 @@ function resetCircuit(skipPreset){
   wireStart = null; tempWireEnd = null; dragNode = null;
   const lv = LV();
   inputBits = new Array(lv.qubits).fill(0);
+  if (lv.mode === 'mystery') mysteryKey = Math.floor(Math.random() * 8);
   const wrap = document.getElementById('canvasWrap');
   const minH = lv.qubits === 3 ? 340 : (lv.qubits === 2 ? 270 : 220);
   const W = Math.max((wrap.clientWidth || 760) - 2, 560, lv.canvasW || 0);
@@ -998,6 +1023,16 @@ function applyGate(s, type, qs, n){
   } else if (type === 'CCZ'){
     const m1 = maskOf(qs[0], n), m2 = maskOf(qs[1], n), m3 = maskOf(qs[2], n);
     for (let i = 0; i < N; i++) if ((i & m1) && (i & m2) && (i & m3)) s[i] = -s[i];
+  } else if (type === 'ORACLE'){
+    // 封印された判定回路：ピンに入った3ビットが隠し鍵と一致した候補の矢印だけ反転
+    for (let i = 0; i < N; i++){
+      let match = true;
+      for (let j = 0; j < 3; j++){
+        const bit = (i & maskOf(qs[j], n)) ? 1 : 0;
+        if (bit !== ((mysteryKey >> (2 - j)) & 1)) match = false;
+      }
+      if (match) s[i] = -s[i];
+    }
   }
 }
 function ketStr(i, n){
@@ -1065,8 +1100,8 @@ function render(){
       out += `<text x="${node.x + w/2}" y="${node.y + 30}" font-size="15" font-weight="950" text-anchor="middle" fill="#1b2340" pointer-events="none">${node.label}</text>`;
     } else {
       const spec = GATESPEC[node.type];
-      const fs = spec.pins === 1 ? 19 : (node.type === 'CCX' ? 11 : 12);
-      out += `<text x="${node.x + w/2}" y="${node.y + h/2 + (spec.pins===1 ? 7 : 4)}" font-size="${fs}" font-weight="950" text-anchor="middle" fill="#1b2340" pointer-events="none">${spec.short}</text>`;
+      const fs = spec.pins === 1 ? 19 : (node.type === 'CCX' ? 11 : (node.type === 'ORACLE' ? 28 : 12));
+      out += `<text x="${node.x + w/2}" y="${node.y + h/2 + (spec.pins===1 ? 7 : (node.type==='ORACLE' ? 10 : 4))}" font-size="${fs}" font-weight="950" text-anchor="middle" fill="${spec.dark ? '#ffd44a' : '#1b2340'}" pointer-events="none">${spec.short}</text>`;
       if (spec.pinMarks){
         for (let i = 0; i < spec.pins; i++){
           const py = node.y + h/2 - ((spec.pins - 1) * 24) / 2 + i * 24;
@@ -1251,6 +1286,18 @@ document.getElementById('runBtn').addEventListener('click', () => {
       html += `<tr class="${pass?'pass':'fail'}"><td>|${ketStr(idx, n)}⟩</td><td>${outStr}</td><td>|${ketStr(exp, n)}⟩</td></tr>`;
     }
     html += '</table>';
+  } else if (lv.mode === 'mystery'){
+    const s = evalCircuit(lv.input || 0).s;
+    const p = s[mysteryKey] * s[mysteryKey];
+    allPass = p >= 0.9;
+    html = `<p class="verify-note">封印オラクルの鍵は <strong>|${ketStr(mysteryKey, n)}⟩</strong> でした。あなたの回路がこの鍵に育てた確率：<strong>${Math.round(p*1000)/10}%</strong>（90%以上で合格）。`
+      + `「やり直す」と鍵はランダムに変わります——同じ形の回路のままで、もう一度あぶり出せることを確かめられます。</p>`;
+    html += '<table><tr><th>答え候補</th><th>回路の矢印</th><th>確率</th></tr>';
+    for (let i = 0; i < s.length; i++){
+      const cls = i === mysteryKey ? (allPass ? 'pass' : 'fail') : '';
+      html += `<tr class="${cls}"><td>|${ketStr(i, n)}⟩${i === mysteryKey ? '（鍵）' : ''}</td><td>${fmtAmp(s[i])}</td><td>${Math.round(s[i]*s[i]*1000)/10}%</td></tr>`;
+    }
+    html += '</table>';
   } else {
     const s = evalCircuit(lv.input || 0).s;
     const t = lv.target;
@@ -1390,10 +1437,10 @@ function renderDialogue(dialogue){
 }
 
 const CLEAR_DIALOGUE_1 = [
-  { who:'cat',    img:'cat',        text:'ここまでの15レベルを並べ直してみよう。' },
+  { who:'cat',    img:'cat',        text:'ここまでの16レベルを並べ直してみよう。' },
   { who:'rabbit', img:'rabbit',     text:'前半は量子ビット1個でした。XとHとZ。それからH2個の打ち消しと、HとZだけでXが作れる話——位相が確率に化けるやつです。' },
   { who:'cat',    img:'catThink',   text:'そう。後半はCNOTとトフォリで、論理回路の旅で作ったXOR・AND・半加算器を、情報を消さない形で作り直した。' },
-  { who:'rabbit', img:'rabbitThink', text:'そして最後の章では、オラクルと拡散を組んで、グローバーの探索で鍵101を確率94.5%まで追い込みました。まとめると——' },
+  { who:'rabbit', img:'rabbitThink', text:'そして最後の章では、オラクルと拡散を組んでグローバーの探索を完成させて、仕上げには封印オラクルの「誰も知らない鍵」まで言い当てました。まとめると——' },
 ];
 const CLEAR_DIALOGUE_2 = [
   { who:'rabbit', img:'rabbitThink', text:'重ね合わせ足し算では、4つの答えが並んでいても読み出せるのは1つだけでした。でもグローバーでは、干渉で欲しい答えの矢印を育ててから測りました。「干渉の設計」の意味が、手を動かしてようやくつながりました。' },
@@ -1416,6 +1463,7 @@ function showClearScreen(){
     'H＋半加算器 → 4通りの足し算が同時に一覧表へ。でも読み出せるのは1つ<br>' +
     'H・X・CCZ → オラクル（見えない印）と拡散（平均折り返し）<br>' +
     '（オラクル→拡散）×2反復 → グローバーの探索：8候補から鍵を94.5%で発見<br>' +
+    '封印オラクル → 鍵を知らないまま、同じ回路で鍵をあぶり出す<br>' +
     '<strong>だから量子計算の速さは「干渉の設計」で決まる</strong>' +
     '<hr style="margin:12px 0;border-color:rgba(0,0,0,.15)">' +
     '<small>この12レベルで組んだゲート（X・H・Z・CNOT・トフォリ）に位相回転を加えた数種類だけで、' +
