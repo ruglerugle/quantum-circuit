@@ -182,7 +182,20 @@ a.head-btn{text-decoration:none;display:inline-flex;align-items:center;justify-c
 #verifyTable tr.fail td{color:#c0241a;font-weight:900}
 
 #playRow{flex:1;min-height:0;display:flex;overflow:hidden;position:relative}
-#scrollHint{position:absolute;top:10px;right:10px;background:rgba(27,35,64,.72);color:#fff;font-size:11px;font-weight:900;padding:5px 11px;border-radius:999px;pointer-events:none;display:none;z-index:6}
+#scrollHint{position:absolute;top:10px;left:50%;transform:translateX(-50%);background:rgba(27,35,64,.72);color:#fff;font-size:11px;font-weight:900;padding:5px 11px;border-radius:999px;pointer-events:none;display:none;z-index:6}
+#printBtn{position:absolute;top:8px;right:312px;z-index:7;padding:6px 12px;border:1.5px solid #7a8bb3;border-radius:7px;background:#fff;color:#1b2340;font-size:12px;font-weight:900;cursor:pointer;box-shadow:0 2px 6px rgba(0,0,0,.15);touch-action:manipulation}
+#printBtn:hover{background:#eef2fb}
+@media(max-width:900px){#printBtn{display:none}}
+#printArea{display:none}
+@media print{
+  @page{size:A4 landscape;margin:8mm}
+  html,body{background:#fff!important;max-width:none;overflow:visible}
+  body::before{display:none}
+  .app-shell{display:none!important}
+  #printArea{display:block}
+  #printArea .print-title{font-size:13px;font-weight:900;color:#000;margin:0 0 5mm;font-family:system-ui,sans-serif}
+  #printArea svg{display:block}
+}
 #canvasWrap{flex:1;min-width:0;position:relative;overflow:auto;background:radial-gradient(circle at 1px 1px,#dbe4f4 1px,transparent 0) 0 0/20px 20px,var(--paper2)}
 #msg{position:absolute;bottom:16px;left:50%;transform:translateX(-50%);padding:10px 24px;border-radius:8px;font-weight:950;font-size:15px;display:none;white-space:nowrap;box-shadow:0 4px 12px rgba(0,0,0,.2);z-index:5}
 
@@ -352,6 +365,7 @@ button{touch-action:manipulation;-webkit-tap-highlight-color:transparent}
             <svg id="svg"></svg>
           </div>
           <div id="msg"></div>
+          <button id="printBtn" onclick="printCircuit()" title="回路図をA4横1枚に収めて印刷">🖨 印刷</button>
           <div id="scrollHint">⇆ 横にスクロールできます</div>
           <aside id="statePanel">
             <div class="sp-head">矢印の一覧表 <span class="sp-sub">（いまの回路が作る状態）</span></div>
@@ -367,6 +381,9 @@ button{touch-action:manipulation;-webkit-tap-highlight-color:transparent}
     </main>
   </div>
 </div>
+
+<!-- 印刷専用エリア（画面では非表示、印刷時のみ表示） -->
+<div id="printArea"></div>
 
 <script>
 // ====================== ゲート仕様 ======================
@@ -1174,6 +1191,36 @@ function renderStatePanel(){
 function updateAll(){
   render();
   renderStatePanel();
+}
+
+// ====================== 印刷（A4横1枚に回路図を収める） ======================
+function printCircuit(){
+  if (!nodes.length) return;
+  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+  for (const nd of nodes){
+    const w = nodeWidth(nd), h = nodeHeight(nd);
+    minX = Math.min(minX, nd.x); minY = Math.min(minY, nd.y);
+    maxX = Math.max(maxX, nd.x + w); maxY = Math.max(maxY, nd.y + h);
+  }
+  const pad = 28;
+  minX -= pad; minY -= pad; maxX += pad; maxY += pad;
+  const W = maxX - minX, H = maxY - minY;
+  const clone = svg.cloneNode(true);
+  clone.querySelectorAll('[data-del]').forEach(el => el.remove());   // 削除ボタンは印刷しない
+  clone.setAttribute('viewBox', `${minX} ${minY} ${W} ${H}`);
+  const PW = 278, PH = 190;   // A4横の印刷可能領域(mm)
+  let mmW = PW, mmH = PW * H / W;
+  if (mmH > PH){ mmH = PH; mmW = PH * W / H; }
+  clone.setAttribute('width', mmW + 'mm');
+  clone.setAttribute('height', mmH + 'mm');
+  const area = document.getElementById('printArea');
+  area.innerHTML = '';
+  const title = document.createElement('div');
+  title.className = 'print-title';
+  title.textContent = `${LV().label}　${LV().name} ― 量子回路クエスト`;
+  area.appendChild(title);
+  area.appendChild(clone);
+  window.print();
 }
 
 // ====================== 入力操作（ポインタ） ======================
