@@ -954,9 +954,8 @@ function flashStatus(text){
 function maskOf(q, n){ return 1 << (n - 1 - q); }
 
 // 回路全体を評価する。配線が未完成なら null。
-// 返り値 {s: 出力ラベル順に並べた状態ベクトル, perm: perm[入力q]=つながった出力ノードのqidx,
-//         steps: traceOut指定時、各ゲート実行の前後の「その候補の振幅」[{gateId,before,after}]}
-function evalCircuit(inputIdx, traceOut){
+// 返り値 {s: 出力ラベル順に並べた状態ベクトル, perm: perm[入力q]=つながった出力ノードのqidx}
+function evalCircuit(inputIdx){
   const lv = LV(), n = lv.qubits;
   // 完全に未配線のゲート（場に置いただけで使っていない部品）は無視する
   const isFloating = nd => (nd.type === 'INPUT' || nd.type === 'OUTPUT') ? false
@@ -1013,21 +1012,7 @@ function evalCircuit(inputIdx, traceOut){
   const N = 1 << n;
   let s = new Float64Array(N);
   s[inputIdx] = 1;
-  // トレース：追う候補（出力ラベル順）を量子ビット順のインデックスqiに写す
-  let steps = null, qi = 0;
-  if (traceOut != null){
-    for (let q = 0; q < n; q++) if (traceOut & maskOf(perm[q], n)) qi |= maskOf(q, n);
-    steps = [];
-  }
-  for (const gid of order){
-    if (steps){
-      const before = s[qi];
-      applyGate(s, getNode(gid).type, gq.get(gid) || [], n);
-      steps.push({ gateId: gid, before, after: s[qi] });
-    } else {
-      applyGate(s, getNode(gid).type, gq.get(gid) || [], n);
-    }
-  }
+  for (const gid of order) applyGate(s, getNode(gid).type, gq.get(gid) || [], n);
   // 出力ノードのラベル順に並べ替え（配線の交差＝ラベルの付け替えを反映）
   if (perm.some((p, q) => p !== q)){
     const s2 = new Float64Array(N);
@@ -1038,7 +1023,7 @@ function evalCircuit(inputIdx, traceOut){
     }
     s = s2;
   }
-  return { s, perm, steps };
+  return { s, perm };
 }
 
 function applyGate(s, type, qs, n){
@@ -1076,6 +1061,89 @@ function applyGate(s, type, qs, n){
     }
   }
 }
+
+// ====================== ビット追跡（選んだ候補に至るラインの0/1） ======================
+// 位相ゲート(Z/CCZ/ORACLE)はビットを変えない。Hは分岐点なので下流を不明(null)にする。
+// X/CNOT/CCX はすべて自分自身が逆変換なので、前向き・後ろ向きとも同じ処理でよい。
+function applyBits(b, type, qs){
+  if (type === 'X'){ if (b[qs[0]] != null) b[qs[0]] ^= 1; }
+  else if (type === 'CNOT'){ const c = b[qs[0]], t = qs[1]; if (c == null) b[t] = null; else if (c === 1 && b[t] != null) b[t] ^= 1; }
+  else if (type === 'CCX'){ const c1 = b[qs[0]], c2 = b[qs[1]], t = qs[2]; if (c1 == null || c2 == null) b[t] = null; else if (c1 && c2 && b[t] != null) b[t] ^= 1; }
+  else if (type === 'H'){ b[qs[0]] = null; }
+  // Z / CCZ / ORACLE：ビットは変わらない
+}
+// 選んだ出力候補 outIdx に至るラインで、各配線が0か1かを求める。返り値 Map<wireId, 0|1>
+function computeBitTrace(outIdx){
+  const lv = LV(), n = lv.qubits;
+  const isFloating = nd => (nd.type === 'INPUT' || nd.type === 'OUTPUT') ? false
+    : ![...nd.inPins, ...nd.outPins].some(p => wireTo(p) || wireFrom(p));
+  for (const nd of nodes){
+    if (nd.type === 'INPUT'){ if (!wireFrom(nd.outPins[0])) return null; }
+    else if (nd.type === 'OUTPUT'){ if (!wireTo(nd.inPins[0])) return null; }
+    else if (!isFloating(nd)){
+      for (const p of nd.inPins) if (!wireTo(p)) return null;
+      for (const p of nd.outPins) if (!wireFrom(p)) return null;
+    }
+  }
+  const gq = new Map(), perm = new Array(n).fill(-1), pinQubit = new Map();
+  for (const inp of nodes.filter(x => x.type === 'INPUT')){
+    pinQubit.set(inp.outPins[0], inp.qidx);
+    let w = wireFrom(inp.outPins[0]), guard = 0;
+    while (w){
+      if (++guard > 3000) return null;
+      const pin = getPin(w.toPin), nd = getNode(pin.nodeId);
+      pinQubit.set(pin.id, inp.qidx);
+      if (nd.type === 'OUTPUT'){ perm[inp.qidx] = nd.qidx; break; }
+      if (!gq.has(nd.id)) gq.set(nd.id, []);
+      gq.get(nd.id)[pin.index] = inp.qidx;
+      const op = nd.outPins[pin.index];
+      pinQubit.set(op, inp.qidx);
+      w = wireFrom(op);
+    }
+  }
+  if (perm.includes(-1)) return null;
+  const gates = nodes.filter(x => x.type !== 'INPUT' && x.type !== 'OUTPUT' && !isFloating(x));
+  const indeg = new Map(), children = new Map();
+  gates.forEach(g => { indeg.set(g.id, 0); children.set(g.id, []); });
+  for (const g of gates) for (const pid of g.inPins){
+    const src = getNode(getPin(wireTo(pid).fromPin).nodeId);
+    if (src.type !== 'INPUT'){ indeg.set(g.id, indeg.get(g.id) + 1); children.get(src.id).push(g.id); }
+  }
+  const queue = gates.filter(g => indeg.get(g.id) === 0).map(g => g.id);
+  const order = [];
+  while (queue.length){
+    const gid = queue.shift(); order.push(gid);
+    for (const cid of children.get(gid)){ indeg.set(cid, indeg.get(cid) - 1); if (indeg.get(cid) === 0) queue.push(cid); }
+  }
+  if (order.length !== gates.length) return null;
+  const orderIndex = new Map(); order.forEach((gid, k) => orderIndex.set(gid, k));
+  const inIdx = panelInputIdx();
+  const inBits = new Array(n), outBits = new Array(n);
+  for (let q = 0; q < n; q++){ inBits[q] = (inIdx & maskOf(q, n)) ? 1 : 0; outBits[q] = (outIdx & maskOf(perm[q], n)) ? 1 : 0; }
+  const L = order.length;
+  const fwd = [inBits.slice()];
+  let cur = inBits.slice();
+  for (let k = 0; k < L; k++){ applyBits(cur, getNode(order[k]).type, gq.get(order[k]) || []); fwd.push(cur.slice()); }
+  const bwd = new Array(L + 1); bwd[L] = outBits.slice();
+  cur = outBits.slice();
+  for (let k = L - 1; k >= 0; k--){ applyBits(cur, getNode(order[k]).type, gq.get(order[k]) || []); bwd[k] = cur.slice(); }
+  const slot = [];
+  for (let k = 0; k <= L; k++){
+    slot[k] = new Array(n);
+    for (let q = 0; q < n; q++) slot[k][q] = fwd[k][q] != null ? fwd[k][q] : (bwd[k][q] != null ? bwd[k][q] : null);
+  }
+  const wireBit = new Map();
+  for (const w of wires){
+    const q = pinQubit.get(w.fromPin);
+    if (q == null) continue;
+    const src = getNode(getPin(w.fromPin).nodeId);
+    const sk = src.type === 'INPUT' ? 0 : (orderIndex.get(src.id) + 1);
+    const b = slot[sk] ? slot[sk][q] : null;
+    if (b != null) wireBit.set(w.id, b);
+  }
+  return wireBit;
+}
+
 function ketStr(i, n){
   let b = '';
   for (let q = 0; q < n; q++) b += (i & maskOf(q, n)) ? '1' : '0';
@@ -1109,27 +1177,28 @@ function panelInputIdx(){
   return idx;
 }
 
-function fmtTrace(a){
-  if (Math.abs(a) < 0.005) return '0';
-  const v = Math.round(Math.abs(a) * 100) / 100;
-  return (a < 0 ? '−' : '+') + v;
-}
 function render(){
   const lv = LV();
   let out = '';
-  // 道すじ表示：追っている候補の、各ゲート前後の振幅
-  let traceMap = null;
+  // 道すじ表示：選んだ候補に至るラインの、各配線の0/1
+  let wireBit = null;
   if (traceIdx != null){
-    const ev = evalCircuit(panelInputIdx(), traceIdx);
-    if (ev && ev.steps){ traceMap = new Map(); for (const st of ev.steps) traceMap.set(st.gateId, st); }
-    else traceIdx = null;
+    wireBit = computeBitTrace(traceIdx);
+    if (!wireBit) traceIdx = null;
   }
   let traceLbls = '';
   // 配線
   for (const w of wires){
     const p1 = pinPos(getPin(w.fromPin)), p2 = pinPos(getPin(w.toPin));
     const mx = (p1.x + p2.x) / 2;
-    out += `<path class="tn" data-wireid="${w.id}" d="M ${p1.x} ${p1.y} C ${mx} ${p1.y}, ${mx} ${p2.y}, ${p2.x} ${p2.y}" stroke="#7a8bb3" stroke-width="3.5" fill="none" style="cursor:pointer"/>`;
+    const lit = wireBit && wireBit.has(w.id);
+    out += `<path class="tn" data-wireid="${w.id}" d="M ${p1.x} ${p1.y} C ${mx} ${p1.y}, ${mx} ${p2.y}, ${p2.x} ${p2.y}" stroke="${lit ? (wireBit.get(w.id) ? '#1aa85a' : '#c3ccdb') : '#7a8bb3'}" stroke-width="${lit ? 4 : 3.5}" fill="none" style="cursor:pointer"/>`;
+    if (lit){
+      const b = wireBit.get(w.id);
+      const cx = (p1.x + p2.x) / 2, cy = (p1.y + p2.y) / 2;
+      traceLbls += `<circle cx="${cx}" cy="${cy}" r="9" fill="#fff" stroke="${b ? '#1aa85a' : '#aab3c4'}" stroke-width="1.5"/>`
+        + `<text x="${cx}" y="${cy + 4}" font-size="12" font-weight="950" text-anchor="middle" fill="${b ? '#1aa85a' : '#8a97b8'}" font-family="ui-monospace,monospace" pointer-events="none">${b}</text>`;
+    }
   }
   // 引っ張り中の仮配線
   if (wireStart && tempWireEnd){
@@ -1170,16 +1239,6 @@ function render(){
         + `<circle cx="${node.x + w - 7}" cy="${node.y + 9}" r="10" fill="transparent"/>`
         + `<text x="${node.x + w - 4}" y="${node.y + 13}" font-size="11" text-anchor="end" fill="#8892ad" pointer-events="none">✕</text>`
         + `</g>`;
-      // 道すじの数値（このゲート通過直後の振幅。入力直結ゲートには通過前も）
-      if (traceMap && traceMap.has(node.id)){
-        const st = traceMap.get(node.id);
-        const cy = node.y + h / 2 - 12;
-        const col = a => a > 0.004 ? '#b8860b' : (a < -0.004 ? '#b0483a' : '#8a97b8');
-        const lbl = (x, anc, a) => `<text x="${x}" y="${cy}" font-size="10.5" font-weight="900" text-anchor="${anc}" fill="${col(a)}" stroke="#fff" stroke-width="3.5" paint-order="stroke" pointer-events="none">${fmtTrace(a)}</text>`;
-        traceLbls += lbl(node.x + w + 5, 'start', st.after);
-        const inputFed = node.inPins.some(p => { const wt = wireTo(p); return wt && getNode(getPin(wt.fromPin).nodeId).type === 'INPUT'; });
-        if (inputFed) traceLbls += lbl(node.x - 5, 'end', st.before);
-      }
     }
     out += `</g>`;
     // ピン（ノードの上に重ねる）
@@ -1228,8 +1287,8 @@ function renderStatePanel(){
     </div>`;
   }
   html += traceIdx != null
-    ? `<div class="trace-cap">|${ketStr(traceIdx, n)}⟩ の道すじを回路に表示中（各ゲートの前後の振幅）。もう一度クリックで解除。</div>`
-    : `<div class="trace-cap">候補の行をクリックすると、その候補の振幅が回路の各ゲート前後でどう変わるか表示します。</div>`;
+    ? `<div class="trace-cap">|${ketStr(traceIdx, n)}⟩ に至るラインを回路に表示中（各配線が0か1か）。緑=1・灰=0。もう一度クリックで解除。</div>`
+    : `<div class="trace-cap">候補の行をクリックすると、その候補に至るラインで各配線がゲート前後で0か1かを回路に表示します。</div>`;
   document.getElementById('ampTable').innerHTML = html;
 }
 
