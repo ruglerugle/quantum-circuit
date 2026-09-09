@@ -1115,11 +1115,11 @@ function render(){
           out += `<text x="${node.x + w - 12}" y="${py + 4}" font-size="11" font-weight="900" text-anchor="middle" fill="${stroke}" pointer-events="none">${spec.pinMarks[i]}</text>`;
         }
       }
-      // 削除ボタンは delOut に貯めて、全ノード・ピンの後（最前面）に描く
-      const dx = node.x + w, dy = node.y;
+      // 削除ボタンは delOut に貯めて、全ノード・ピンの後（最前面）に描く。
+      // 見た目は元の小さなグレーの×。当たり判定だけ透明の円で確保する
       delOut += `<g class="tn" data-del="${node.id}" style="cursor:pointer">`
-        + `<circle cx="${dx}" cy="${dy}" r="12" fill="#fff" stroke="#c56a2a" stroke-width="1.5"/>`
-        + `<text x="${dx}" y="${dy + 4}" font-size="13" font-weight="900" text-anchor="middle" fill="#c56a2a" pointer-events="none">✕</text>`
+        + `<circle cx="${node.x + w - 7}" cy="${node.y + 9}" r="10" fill="transparent"/>`
+        + `<text x="${node.x + w - 4}" y="${node.y + 13}" font-size="11" text-anchor="end" fill="#8892ad" pointer-events="none">✕</text>`
         + `</g>`;
     }
     out += `</g>`;
