@@ -204,7 +204,10 @@ a.head-btn{text-decoration:none;display:inline-flex;align-items:center;justify-c
 .sp-head{font-size:13px;font-weight:950;color:#1b2340;margin-bottom:2px}
 .sp-sub{font-size:11px;color:var(--muted);font-weight:700}
 #spInputNote{font-size:11px;color:var(--muted);font-weight:700;margin:4px 0 8px;line-height:1.5}
-.amp-row{display:grid;grid-template-columns:44px 50px 44px 1fr;gap:6px;align-items:center;padding:4px 0;border-bottom:1px dashed #dde3ef}
+.amp-row{display:grid;grid-template-columns:44px 50px 44px 1fr;gap:6px;align-items:center;padding:4px 2px;border-bottom:1px dashed #dde3ef;cursor:pointer;border-radius:5px}
+.amp-row:hover{background:#eef3fb}
+.amp-row.traced{background:#e2ecff;outline:2px solid #2e7dd1;outline-offset:-2px;opacity:1}
+.trace-cap{font-size:10.5px;color:var(--muted);font-weight:750;line-height:1.6;margin-top:7px}
 .amp-row.zero{opacity:.42}
 .amp-row.flash{background:#fff3c4;border-radius:6px}
 .amp-ket{font-size:13px;font-weight:950;font-family:ui-monospace,'Cascadia Code',monospace;white-space:nowrap}
@@ -705,6 +708,7 @@ let dragNode = null, dragOffset = {x:0,y:0}, dragMoved = false;
 let wireStart = null, tempWireEnd = null;
 let inputBits = [];   // unitaryレベルの入力切り替え（量子ビットごとに0/1）
 let mysteryKey = 0;   // 覆面オラクルの隠し鍵（mysteryレベルで回路リセットごとにランダム）
+let traceIdx = null;  // 「道すじ表示」で追っている答え候補（出力ラベル順のインデックス）
 
 const svg = document.getElementById('svg');
 
@@ -851,7 +855,7 @@ function pinPos(pin){
 
 function resetCircuit(skipPreset){
   nodes = []; pins = []; wires = [];
-  wireStart = null; tempWireEnd = null; dragNode = null;
+  wireStart = null; tempWireEnd = null; dragNode = null; traceIdx = null;
   const lv = LV();
   inputBits = new Array(lv.qubits).fill(0);
   if (lv.mode === 'mystery') mysteryKey = Math.floor(Math.random() * 8);
@@ -950,8 +954,9 @@ function flashStatus(text){
 function maskOf(q, n){ return 1 << (n - 1 - q); }
 
 // 回路全体を評価する。配線が未完成なら null。
-// 返り値 {s: 出力ラベル順に並べた状態ベクトル, perm: perm[入力q]=つながった出力ノードのqidx}
-function evalCircuit(inputIdx){
+// 返り値 {s: 出力ラベル順に並べた状態ベクトル, perm: perm[入力q]=つながった出力ノードのqidx,
+//         steps: traceOut指定時、各ゲート実行の前後の「その候補の振幅」[{gateId,before,after}]}
+function evalCircuit(inputIdx, traceOut){
   const lv = LV(), n = lv.qubits;
   // 完全に未配線のゲート（場に置いただけで使っていない部品）は無視する
   const isFloating = nd => (nd.type === 'INPUT' || nd.type === 'OUTPUT') ? false
@@ -1008,7 +1013,21 @@ function evalCircuit(inputIdx){
   const N = 1 << n;
   let s = new Float64Array(N);
   s[inputIdx] = 1;
-  for (const gid of order) applyGate(s, getNode(gid).type, gq.get(gid) || [], n);
+  // トレース：追う候補（出力ラベル順）を量子ビット順のインデックスqiに写す
+  let steps = null, qi = 0;
+  if (traceOut != null){
+    for (let q = 0; q < n; q++) if (traceOut & maskOf(perm[q], n)) qi |= maskOf(q, n);
+    steps = [];
+  }
+  for (const gid of order){
+    if (steps){
+      const before = s[qi];
+      applyGate(s, getNode(gid).type, gq.get(gid) || [], n);
+      steps.push({ gateId: gid, before, after: s[qi] });
+    } else {
+      applyGate(s, getNode(gid).type, gq.get(gid) || [], n);
+    }
+  }
   // 出力ノードのラベル順に並べ替え（配線の交差＝ラベルの付け替えを反映）
   if (perm.some((p, q) => p !== q)){
     const s2 = new Float64Array(N);
@@ -1019,7 +1038,7 @@ function evalCircuit(inputIdx){
     }
     s = s2;
   }
-  return { s, perm };
+  return { s, perm, steps };
 }
 
 function applyGate(s, type, qs, n){
@@ -1090,9 +1109,22 @@ function panelInputIdx(){
   return idx;
 }
 
+function fmtTrace(a){
+  if (Math.abs(a) < 0.005) return '0';
+  const v = Math.round(Math.abs(a) * 100) / 100;
+  return (a < 0 ? '−' : '+') + v;
+}
 function render(){
   const lv = LV();
   let out = '';
+  // 道すじ表示：追っている候補の、各ゲート前後の振幅
+  let traceMap = null;
+  if (traceIdx != null){
+    const ev = evalCircuit(panelInputIdx(), traceIdx);
+    if (ev && ev.steps){ traceMap = new Map(); for (const st of ev.steps) traceMap.set(st.gateId, st); }
+    else traceIdx = null;
+  }
+  let traceLbls = '';
   // 配線
   for (const w of wires){
     const p1 = pinPos(getPin(w.fromPin)), p2 = pinPos(getPin(w.toPin));
@@ -1138,6 +1170,16 @@ function render(){
         + `<circle cx="${node.x + w - 7}" cy="${node.y + 9}" r="10" fill="transparent"/>`
         + `<text x="${node.x + w - 4}" y="${node.y + 13}" font-size="11" text-anchor="end" fill="#8892ad" pointer-events="none">✕</text>`
         + `</g>`;
+      // 道すじの数値（このゲート通過直後の振幅。入力直結ゲートには通過前も）
+      if (traceMap && traceMap.has(node.id)){
+        const st = traceMap.get(node.id);
+        const cy = node.y + h / 2 - 12;
+        const col = a => a > 0.004 ? '#b8860b' : (a < -0.004 ? '#b0483a' : '#8a97b8');
+        const lbl = (x, anc, a) => `<text x="${x}" y="${cy}" font-size="10.5" font-weight="900" text-anchor="${anc}" fill="${col(a)}" stroke="#fff" stroke-width="3.5" paint-order="stroke" pointer-events="none">${fmtTrace(a)}</text>`;
+        traceLbls += lbl(node.x + w + 5, 'start', st.after);
+        const inputFed = node.inPins.some(p => { const wt = wireTo(p); return wt && getNode(getPin(wt.fromPin).nodeId).type === 'INPUT'; });
+        if (inputFed) traceLbls += lbl(node.x - 5, 'end', st.before);
+      }
     }
     out += `</g>`;
     // ピン（ノードの上に重ねる）
@@ -1148,7 +1190,7 @@ function render(){
       out += `<circle class="tn" data-pinid="${pin.id}" cx="${pos.x}" cy="${pos.y}" r="9" fill="${sel ? '#ffd54f' : (pin.kind === 'out' ? '#378add' : '#7a8bb3')}" stroke="${sel ? '#d4870a' : '#5a6c99'}" stroke-width="${sel ? 3 : 2}" style="cursor:crosshair"/>`;
     }
   }
-  svg.innerHTML = out + delOut;
+  svg.innerHTML = out + traceLbls + delOut;
 }
 
 function renderStatePanel(){
@@ -1178,13 +1220,16 @@ function renderStatePanel(){
     } else {
       arrow = `<line x1="${23+len}" y1="8" x2="${23-len+4}" y2="8" stroke="#b0483a" stroke-width="3"/><polygon points="${23-len},8 ${23-len+7},4.5 ${23-len+7},11.5" fill="#b0483a"/>`;
     }
-    html += `<div class="amp-row${zero?' zero':''}" data-amprow="${i}">
+    html += `<div class="amp-row${zero?' zero':''}${i===traceIdx?' traced':''}" data-amprow="${i}">
       <span class="amp-ket">|${ketStr(i, n)}⟩</span>
       <svg width="46" height="16" viewBox="0 0 46 16">${arrow}</svg>
       <span class="amp-val${a < -0.004?' neg':''}">${fmtAmp(a)}</span>
       <span class="prob-track"><span class="prob-fill" style="width:${Math.min(100, p*100)}%"></span></span>
     </div>`;
   }
+  html += traceIdx != null
+    ? `<div class="trace-cap">|${ketStr(traceIdx, n)}⟩ の道すじを回路に表示中（各ゲートの前後の振幅）。もう一度クリックで解除。</div>`
+    : `<div class="trace-cap">候補の行をクリックすると、その候補の振幅が回路の各ゲート前後でどう変わるか表示します。</div>`;
   document.getElementById('ampTable').innerHTML = html;
 }
 
@@ -1301,6 +1346,15 @@ svg.addEventListener('pointerup', (e) => {
 svg.addEventListener('pointercancel', () => { dragNode = null; });
 
 // ====================== 測定 ======================
+// 一覧表の行クリック → その候補の「道すじ（各ゲート前後の振幅）」を回路に表示／解除
+document.getElementById('ampTable').addEventListener('click', (e) => {
+  const row = e.target.closest ? e.target.closest('.amp-row') : null;
+  if (!row) return;
+  const i = Number(row.dataset.amprow);
+  traceIdx = (traceIdx === i) ? null : i;
+  updateAll();
+});
+
 document.getElementById('measureBtn').addEventListener('click', () => {
   const lv = LV(), n = lv.qubits;
   const ev = evalCircuit(panelInputIdx());
