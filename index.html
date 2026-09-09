@@ -760,7 +760,8 @@ function goalTableHTML(lv){
     h += `<tr><td>|${ketStr(i, n)}⟩</td><td>${fmtAmp(a)}</td><td>${p}%</td></tr>`;
   }
   h += '</table>';
-  h += '<span class="goal-note">入力 |' + '0'.repeat(n) + '⟩ から出発して、この矢印の一覧表を作れば合格です（表全体の向きの反転は同じものとみなします）。</span>';
+  h += '<span class="goal-note">入力 |' + '0'.repeat(n) + '⟩ から出発して、この矢印の一覧表を作れば合格です（表全体の向きの反転は同じものとみなします）。'
+    + `候補の0/1は、回路の上の線から順（${lv.labels.join('・')}）に並んでいます。</span>`;
   return h;
 }
 
@@ -1128,9 +1129,10 @@ function renderStatePanel(){
   const lv = LV(), n = lv.qubits;
   const idx = panelInputIdx();
   const ev = evalCircuit(idx);
-  document.getElementById('spInputNote').innerHTML = lv.mode === 'unitary'
+  document.getElementById('spInputNote').innerHTML = (lv.mode === 'unitary'
     ? `入力：|${ketStr(idx, n)}⟩（左の入力ノードをタップで 0/1 切り替え）`
-    : `入力：|${ketStr(idx, n)}⟩ から出発`;
+    : `入力：|${ketStr(idx, n)}⟩ から出発`)
+    + `<br>0/1の並びは、回路の上の線から順（${lv.labels.join('・')}）`;
   if (!ev){
     document.getElementById('ampTable').innerHTML =
       '<div class="sp-incomplete">配線が未完成です。<br>入力 →（ゲート）→ 出力まで、すべてのピンをつなぐと一覧表が出ます。</div>';
@@ -1306,6 +1308,7 @@ document.getElementById('runBtn').addEventListener('click', () => {
     for (let i = 0; i < s.length; i++) dot += s[i] * t[i];
     const sign = dot < 0 ? -1 : 1;
     html = '<p class="verify-note">このレベルの目標は「矢印の一覧表」を作ることです。表の各行は答え候補——測定したときに出力に現れる可能性のある0/1の並び——で、'
+      + `並びは回路の上の線から順（${lv.labels.join('・')}）です。`
       + '行ごとにあなたの回路が作った矢印と目標の矢印を比べます。数値は矢印の長さと向き（＋＝右向き、−＝左向き、長さの2乗がその並びが出る確率）。</p>'
       + '<table><tr><th>答え候補</th><th>回路が作った矢印</th><th>目標の矢印</th></tr>';
     for (let i = 0; i < s.length; i++){
