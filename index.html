@@ -936,11 +936,14 @@ function maskOf(q, n){ return 1 << (n - 1 - q); }
 // 返り値 {s: 出力ラベル順に並べた状態ベクトル, perm: perm[入力q]=つながった出力ノードのqidx}
 function evalCircuit(inputIdx){
   const lv = LV(), n = lv.qubits;
-  // 完成チェック：全ピンに配線があること
+  // 完全に未配線のゲート（場に置いただけで使っていない部品）は無視する
+  const isFloating = nd => (nd.type === 'INPUT' || nd.type === 'OUTPUT') ? false
+    : ![...nd.inPins, ...nd.outPins].some(p => wireTo(p) || wireFrom(p));
+  // 完成チェック：入力・出力・「使っている」ゲートの全ピンに配線があること
   for (const nd of nodes){
     if (nd.type === 'INPUT'){ if (!wireFrom(nd.outPins[0])) return null; }
     else if (nd.type === 'OUTPUT'){ if (!wireTo(nd.inPins[0])) return null; }
-    else {
+    else if (!isFloating(nd)){
       for (const p of nd.inPins) if (!wireTo(p)) return null;
       for (const p of nd.outPins) if (!wireFrom(p)) return null;
     }
@@ -961,7 +964,7 @@ function evalCircuit(inputIdx){
   }
   if (perm.includes(-1)) return null;
   // ゲートをトポロジカル順（配線の依存順＝時間順）に並べる
-  const gates = nodes.filter(x => x.type !== 'INPUT' && x.type !== 'OUTPUT');
+  const gates = nodes.filter(x => x.type !== 'INPUT' && x.type !== 'OUTPUT' && !isFloating(x));
   const indeg = new Map(), children = new Map();
   gates.forEach(g => { indeg.set(g.id, 0); children.set(g.id, []); });
   for (const g of gates){
@@ -1085,6 +1088,7 @@ function render(){
     out += `<path d="M ${p1.x} ${p1.y} L ${tempWireEnd.x} ${tempWireEnd.y}" stroke="#d4870a" stroke-width="2.5" stroke-dasharray="6 4" fill="none" pointer-events="none"/>`;
   }
   // ノード
+  let delOut = '';   // 削除ボタンは最前面に描く（ピンの当たり判定に隠れないように）
   for (const node of nodes){
     const w = nodeWidth(node), h = nodeHeight(node);
     let fill = '#dce8f5', stroke = '#7a8bb3';
@@ -1111,7 +1115,12 @@ function render(){
           out += `<text x="${node.x + w - 12}" y="${py + 4}" font-size="11" font-weight="900" text-anchor="middle" fill="${stroke}" pointer-events="none">${spec.pinMarks[i]}</text>`;
         }
       }
-      out += `<text data-del="${node.id}" x="${node.x + w - 5}" y="${node.y + 11}" font-size="11" text-anchor="end" fill="#8892ad" style="cursor:pointer">✕</text>`;
+      // 削除ボタンは delOut に貯めて、全ノード・ピンの後（最前面）に描く
+      const dx = node.x + w, dy = node.y;
+      delOut += `<g class="tn" data-del="${node.id}" style="cursor:pointer">`
+        + `<circle cx="${dx}" cy="${dy}" r="12" fill="#fff" stroke="#c56a2a" stroke-width="1.5"/>`
+        + `<text x="${dx}" y="${dy + 4}" font-size="13" font-weight="900" text-anchor="middle" fill="#c56a2a" pointer-events="none">✕</text>`
+        + `</g>`;
     }
     out += `</g>`;
     // ピン（ノードの上に重ねる）
@@ -1122,7 +1131,7 @@ function render(){
       out += `<circle class="tn" data-pinid="${pin.id}" cx="${pos.x}" cy="${pos.y}" r="9" fill="${sel ? '#ffd54f' : (pin.kind === 'out' ? '#378add' : '#7a8bb3')}" stroke="${sel ? '#d4870a' : '#5a6c99'}" stroke-width="${sel ? 3 : 2}" style="cursor:crosshair"/>`;
     }
   }
-  svg.innerHTML = out;
+  svg.innerHTML = out + delOut;
 }
 
 function renderStatePanel(){
