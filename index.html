@@ -5,13 +5,13 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>量子回路クエスト ― 組んで学ぶ量子コンピュータの論理回路</title>
 <meta name="description" content="X・H・Z・CNOT・トフォリ・CCCXの量子ゲートを自分で配線して、重ね合わせ・干渉・もつれ・量子版の足し算、そして検算・印つけ・逆計算でオラクルの部品をそろえるところまで体験できる無料学習ゲーム（全18レベル）。">
-<link rel="canonical" href="https://ruglerugle.github.io/quantum-circuit/">
+<link rel="canonical" href="https://quantum-mechanics.habatakijuku.com/quantum-circuit/">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="量子回路クエスト">
 <meta property="og:locale" content="ja_JP">
 <meta property="og:title" content="量子回路クエスト ― 組んで学ぶ量子コンピュータの論理回路">
 <meta property="og:description" content="量子ゲートを自分で並べて、重ね合わせ・干渉・もつれ・量子版の足し算、そしてオラクルの部品（検算・印つけ・逆計算）まで体験できる無料学習ゲーム。">
-<meta property="og:url" content="https://ruglerugle.github.io/quantum-circuit/">
+<meta property="og:url" content="https://quantum-mechanics.habatakijuku.com/quantum-circuit/">
 <meta name="twitter:card" content="summary">
 <link rel="icon" href="images/favicon.png">
 <script type="application/ld+json">
@@ -20,7 +20,7 @@
   "@type": "LearningResource",
   "name": "量子回路クエスト",
   "description": "X・H・Z・CNOT・トフォリ・CCCXの量子ゲートを自分で配線して、重ね合わせ・干渉・もつれ・量子版の足し算、そして検算・印つけ・逆計算でオラクルの部品をそろえるところまで体験できる無料学習ゲーム（全18レベル）。",
-  "url": "https://ruglerugle.github.io/quantum-circuit/",
+  "url": "https://quantum-mechanics.habatakijuku.com/quantum-circuit/",
   "inLanguage": "ja",
   "learningResourceType": "learning activity",
   "teaches": "量子回路と量子ゲートの仕組み（X・H・Z・CNOT・トフォリ・CCCX・重ね合わせ・干渉・もつれ・可逆計算・判定ビット・検算・印つけ・逆計算）",
@@ -370,8 +370,8 @@ button{touch-action:manipulation;-webkit-tap-highlight-color:transparent}
         </div>
         <div class="ending-links">
           <a class="ending-link share" href="https://x.com/intent/post?text=%E9%87%8F%E5%AD%90%E5%9B%9E%E8%B7%AF%E3%82%AF%E3%82%A8%E3%82%B9%E3%83%88%20%E5%85%A8%E3%83%AC%E3%83%99%E3%83%AB%E3%82%AF%E3%83%AA%E3%82%A2%EF%BC%81%E2%9A%9B%20%E9%87%8F%E5%AD%90%E3%82%B2%E3%83%BC%E3%83%88%E3%82%92%E7%B5%84%E3%82%93%E3%81%A7%E9%87%8F%E5%AD%90%E3%82%B3%E3%83%B3%E3%83%94%E3%83%A5%E3%83%BC%E3%82%BF%E3%81%AE%E8%A8%88%E7%AE%97%E3%82%92%E4%BD%93%E9%A8%93%E3%81%A7%E3%81%8D%E3%82%8B%E7%84%A1%E6%96%99%E5%AD%A6%E7%BF%92%E3%82%B2%E3%83%BC%E3%83%A0&url=https%3A%2F%2Fruglerugle.github.io%2Fquantum-circuit%2F" target="_blank" rel="noopener">𝕏 クリアを報告する</a>
-          <a class="ending-link" href="https://ruglerugle.github.io/oracle-workshop/" target="_blank" rel="noopener">⚙ 続編：オラクル工房へ</a>
-          <a class="ending-link" href="https://ruglerugle.github.io/quantum-computer/" target="_blank" rel="noopener">⚛ 量子コンピュータの旅へ</a>
+          <a class="ending-link" href="https://quantum-mechanics.habatakijuku.com/oracle-workshop/" target="_blank" rel="noopener">⚙ 続編：オラクル工房へ</a>
+          <a class="ending-link" href="https://quantum-mechanics.habatakijuku.com/quantum-computer/" target="_blank" rel="noopener">⚛ 量子コンピュータの旅へ</a>
         </div>
       </div>
 
@@ -649,7 +649,7 @@ const LEVELS = [
     qubits: 1, labels: ["A"], gates: ["X"],
     mode: "state", target: [0, 1],
     dialogue: [
-      { who:'cat', img:'cat', text:'ようこそ、量子回路の練習場へ。<a href="https://ruglerugle.github.io/quantum-computer/" target="_blank" rel="noopener">量子コンピュータの旅</a>では、量子の計算を<strong>矢印の一覧表</strong>で追いかけたね。今度は自分の手で回路を組んで、同じ計算を確かめてみよう。まずはXゲートからだよ。' },
+      { who:'cat', img:'cat', text:'ようこそ、量子回路の練習場へ。<a href="https://quantum-mechanics.habatakijuku.com/quantum-computer/" target="_blank" rel="noopener">量子コンピュータの旅</a>では、量子の計算を<strong>矢印の一覧表</strong>で追いかけたね。今度は自分の手で回路を組んで、同じ計算を確かめてみよう。まずはXゲートからだよ。' },
       { who:'rabbit', img:'rabbit', text:'Xは覚えています。0と1を入れ替えるゲートで、論理回路でいうNOTの量子版ということでしたね。' },
       { who:'cat', img:'catThink', text:'そう。回路図では、入力から出力までつないだ1本の線が、量子ビット1個ぶんの通り道。左が過去、右が未来で、線の途中に挟んだゲートが順に働くんだ。Aの入力と出力のあいだにXを1個つないで、|0⟩を|1⟩にしてごらん。' },
       { who:'rabbit', img:'rabbitThink', text:'一覧表でいうと、|0⟩の行にあった長さ1の矢印が|1⟩の行に引っ越せば成功ですね。やってみます。' },
@@ -915,7 +915,7 @@ const LEVELS = [
       { who:'cat', img:'cat', text:'検算ができたから、印をつけよう。H×3で8候補の重ね合わせを作り、いまの検算をつないで、最後に<strong>DにZ</strong>をかける。' },
       { who:'rabbit', img:'rabbitThink', text:'検算で「一致した枝」だけD＝1になっているから、ZはD＝1の行の矢印だけを反転する。つまり鍵の枝にだけ印がつく、ということですか？' },
       { who:'cat', img:'catThink', text:'その通り。ただし、できあがった一覧表をよく見てほしい。印はついたけれど、鍵の枝だけがD＝1の行に居座ったままだね。' },
-      { who:'rabbit', img:'rabbit', text:'Dに検算の結果が残っています……。「<a href="https://ruglerugle.github.io/decoherence-quest/" target="_blank" rel="noopener">消える干渉縞</a>」で学んだ手がかりと同じで、枝ごとにDの値が違うままだと、あとで干渉できなくなる気がします。' },
+      { who:'rabbit', img:'rabbit', text:'Dに検算の結果が残っています……。「<a href="https://quantum-mechanics.habatakijuku.com/decoherence-quest/" target="_blank" rel="noopener">消える干渉縞</a>」で学んだ手がかりと同じで、枝ごとにDの値が違うままだと、あとで干渉できなくなる気がします。' },
       { who:'cat', img:'cat', text:'いいところに気づいたね。その後片付けが、次の工程だよ。' },
     ],
     solution: OW_L5,
@@ -934,7 +934,7 @@ const LEVELS = [
       { who:'rabbit', img:'rabbitThink', text:'X→CCCX→Xを逆順に……この検算は左右対称だから、同じ並びをもう一度つなげばいいんですね。どの枝でもDは0に戻って、矢印の反転だけがABC側に残る。' },
       { who:'cat', img:'catThink', text:'そう。<strong>検算 → DにZ → 逆計算</strong>。この3工程がオラクルの完成形だよ。外から見ると、X・CCZ・Xで直接組む位相の印つけ――続編のオラクル工房で最初に組む形――と同じ動きになっている。' },
       { who:'rabbit', img:'rabbit', text:'補助ビットは、借りて、使って、返す。返すところまでがオラクルなんですね。' },
-      { who:'cat', img:'cat', text:'これでオラクルの部品は全部そろった。続きは<a href="https://ruglerugle.github.io/oracle-workshop/" target="_blank" rel="noopener">オラクル工房</a>で、この部品を使ってグローバーの探索を組もう。' },
+      { who:'cat', img:'cat', text:'これでオラクルの部品は全部そろった。続きは<a href="https://quantum-mechanics.habatakijuku.com/oracle-workshop/" target="_blank" rel="noopener">オラクル工房</a>で、この部品を使ってグローバーの探索を組もう。' },
     ],
     solution: OW_L6,
   }
