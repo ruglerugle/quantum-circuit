@@ -120,6 +120,11 @@ a.head-btn{text-decoration:none;display:inline-flex;align-items:center;justify-c
 .goal-box th{background:#f4e9c8;font-family:inherit}
 .goal-box .goal-note{font-size:12px;color:#7a6320;font-weight:750}
 .q-link-box strong{color:#12245e}
+.gm-box{background:#fbf6ea;border:1px solid #d9c9a0;border-left:4px solid #b98a2e;border-radius:6px;padding:10px 13px;margin:12px 0;color:#3a2f16}
+.gm-box .gm-title{font-size:13px;font-weight:800;color:#5a4416;margin-bottom:4px}
+.gm-box svg{display:block;width:100%;max-width:400px;margin:4px auto 0;font-family:system-ui,-apple-system,"Hiragino Sans","Yu Gothic",sans-serif}
+.gm-box .gm-note{font-size:12px;color:#5c503a;line-height:1.7;margin-top:6px}
+.gm-box .gm-note a{color:#8a5a2a;text-decoration:underline}
 .intro-actions{display:flex;justify-content:flex-end;margin-top:16px;gap:10px}
 .book-recommend-box{margin:12px 0;background:#f6f4ee;border:1px solid rgba(0,0,0,.13);border-radius:10px;padding:10px 14px}
 .book-recommend-label{display:inline-block;font-size:10px;font-weight:900;color:#888;border:1px solid #aaa;border-radius:4px;padding:0 4px;margin:0 0 6px}
@@ -308,6 +313,7 @@ button{touch-action:manipulation;-webkit-tap-highlight-color:transparent}
         <div id="goal-area"></div>
         <div class="dialog-scene" id="dialog-scene"></div>
         <div id="q-link-area"></div>
+        <div id="gate-matrix-area"></div>
         <div class="intro-actions">
           <button class="btn btn-p" onclick="startGame()">⚛ 回路を組む</button>
         </div>
@@ -426,10 +432,43 @@ const GV_L16 = [ ...GV_H3(0), {t:'ORACLE',q:[0,1,2],c:1}, ...GV_DIFF(2), {t:'ORA
 // qubits: 量子ビット数（上の行が q0）。基底状態の番号は q0 を最上位ビットとする。
 // mode 'state': input（省略時|0…0⟩）から target（実数振幅の配列）を作れたら合格
 // mode 'unitary': testInputs の各基底入力に対し targetMap(idx) の基底状態が出たら合格
+/* ---- ゲートの「数の表」（行列）図。当て方の説明は量子コンピュータの旅に任せ、表そのものだけを見せる ---- */
+const GATE_MATRIX = {
+  X:    { title: 'X の表（2行2列）', n: 1, m: [[0,1],[1,0]], io: '(a, b) → (b, a)', note: '|0⟩ 行と |1⟩ 行の矢印を入れ替える表。' },
+  H:    { title: 'H の表（2行2列）', n: 1, scale: '0.71×', m: [[1,1],[1,-1]], io: '(a, b) → ((a＋b)×0.71,　(a−b)×0.71)', note: '和と差を作る表。−1 が1か所だけ入っている。' },
+  Z:    { title: 'Z の表（2行2列）', n: 1, m: [[1,0],[0,-1]], io: '(a, b) → (a, −b)', note: '|1⟩ 行の矢印だけ正反対にする表。長さは変えない。' },
+  CNOT: { title: 'CNOT の表（4行4列）', n: 2, m: [[1,0,0,0],[0,1,0,0],[0,0,0,1],[0,0,1,0]], io: '(a, b, c, d) → (a, b, d, c)', note: '上2行（A が 0）はそのまま、下2行（A が 1：|10⟩ と |11⟩）だけ入れ替え。「A が 1 なら B を反転」は、この 1 の置き場所を言葉にしたもの。' },
+  CCX:  { title: 'トフォリの表（8行8列）', n: 3, m: null, io: '(a, b, c, d, e, f, g, h) → (a, b, c, d, e, f, h, g)', note: 'A も B も 1 の行（|110⟩ と |111⟩）だけ入れ替え。ほかの6行はそのまま。' },
+  CCZ:  { title: 'CCZ の表（8行8列）', n: 3, m: null, io: '(a, b, c, d, e, f, g, h) → (a, b, c, d, e, f, g, −h)', note: '|111⟩ 行の矢印だけ正反対にする。ほかの7行はそのまま。' },
+};
+(function(){
+  const I8 = () => Array.from({length:8}, (_, r) => Array.from({length:8}, (_, c) => r === c ? 1 : 0));
+  const ccx = I8(); ccx[6][6] = 0; ccx[6][7] = 1; ccx[7][7] = 0; ccx[7][6] = 1; GATE_MATRIX.CCX.m = ccx;
+  const ccz = I8(); ccz[7][7] = -1; GATE_MATRIX.CCZ.m = ccz;
+})();
+function gateMatrixHTML(key) {
+  const g = GATE_MATRIX[key]; if (!g) return '';
+  const N = g.m.length, cs = N > 4 ? 22 : (N > 2 ? 30 : 34);
+  const labels = Array.from({length:N}, (_, i) => '|' + i.toString(2).padStart(g.n, '0') + '⟩');
+  const x0 = 62 + (g.scale ? 26 : 0), y0 = 30, W = 372, H = y0 + N * cs + 26;
+  const changed = g.m.map((row, r) => row.some((v, c) => v !== (r === c ? 1 : 0)));
+  let out = '';
+  labels.forEach((l, i) => { out += `<text x="${x0 + i * cs + cs / 2}" y="${y0 - 8}" text-anchor="middle" font-size="${N > 4 ? 8 : 9.5}" font-weight="700" fill="#6b6150">${l}</text>`; });
+  labels.forEach((l, i) => { out += `<text x="${x0 - 10}" y="${y0 + i * cs + cs / 2 + 4}" text-anchor="end" font-size="${N > 4 ? 8 : 9.5}" font-weight="800" fill="${changed[i] ? '#c8663f' : '#2f6fa6'}">${l}</text>`; });
+  out += `<path d="M${x0 - 2} ${y0} h-6 v${N * cs} h6" fill="none" stroke="#3a2f16" stroke-width="1.4"/><path d="M${x0 + N * cs + 2} ${y0} h6 v${N * cs} h-6" fill="none" stroke="#3a2f16" stroke-width="1.4"/>`;
+  if (g.scale) out += `<text x="${x0 - 14}" y="${y0 + N * cs / 2 + 4}" text-anchor="end" font-size="12" font-weight="900" fill="#3a2f16">${g.scale}</text>`;
+  g.m.forEach((row, r) => row.forEach((v, c) => {
+    const col = v === 0 ? '#9c9483' : (v < 0 ? '#c8433f' : (changed[r] ? '#c8663f' : '#2f6fa6'));
+    out += `<text x="${x0 + c * cs + cs / 2}" y="${y0 + r * cs + cs / 2 + 4}" text-anchor="middle" font-size="${N > 4 ? 10 : 12}" font-weight="900" fill="${col}" opacity="${v === 0 ? .4 : 1}">${v < 0 ? '−1' : v}</text>`;
+  }));
+  out += `<text x="${W / 2}" y="${H - 6}" text-anchor="middle" font-size="9.5" font-weight="700" fill="#6b6150">上：入力の行　左：新しい行（色つき＝変わる行）</text>`;
+  return `<div class="gm-box"><div class="gm-title">🧮 ${g.title}</div><svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${g.title}。入力 ${g.io}">${out}</svg><div class="gm-note"><strong>${g.io}</strong><br>${g.note}　表の当て方（掛けて足す）は <a href="https://quantum-mechanics.habatakijuku.com/quantum-computer/stage2" target="_blank" rel="noopener">量子コンピューターの仕組み STAGE2</a> で。</div></div>`;
+}
+
 const LEVELS = [
   {
     name: "Xゲート：0と1を入れ替える",
-    label: "LEVEL 1", shortName: "X",
+    label: "LEVEL 1", shortName: "X", matrix: "X",
     desc: "量子ビット A は |0⟩（「ゼロの状態」と読む記号）で入力されます。A の入力と出力のあいだに X を1個つないで、出力が |1⟩ になる回路を作ってください。つなぎ方：入力Aの出力ピン → Xの入力ピン → Xの出力ピン → 出力Aの入力ピン。",
     qlink: "|0⟩・|1⟩ は量子ビットの状態を表す記号で、「ゼロの状態」「イチの状態」と読みます。量子コンピュータの状態は「答え候補ごとに矢印が1本ずつ並んだ一覧表」で表され、矢印の長さの2乗が、その候補が測定で出る確率です。Xゲートは0と1の行の矢印を入れ替えるだけの、いちばん古典に近いゲートです。",
     qubits: 1, labels: ["A"], gates: ["X"],
@@ -461,7 +500,7 @@ const LEVELS = [
   },
   {
     name: "Hゲート：重ね合わせを作る",
-    label: "LEVEL 3", shortName: "H",
+    label: "LEVEL 3", shortName: "H", matrix: "H",
     desc: "入力は |0⟩ です。H を1個つないで、|0⟩ と |1⟩ に √2分の1（約0.71）ずつの矢印が並ぶ重ね合わせを作ってください。",
     qlink: "H（アダマール）ゲートは重ね合わせを作る基本ゲートです。|0⟩ を「|0⟩へ√2分の1、|1⟩へ√2分の1」に分けます。0.71の2乗＝0.5 なので、測定すると半々の確率で0か1が出ます。確率の合計がちょうど1のままになるように、√2分の1という長さが選ばれています。",
     qubits: 1, labels: ["A"], gates: ["X","H"],
@@ -492,7 +531,7 @@ const LEVELS = [
   },
   {
     name: "Zゲート：見えない向き（位相）",
-    label: "LEVEL 5", shortName: "Z",
+    label: "LEVEL 5", shortName: "Z", matrix: "Z",
     desc: "入力は |0⟩ です。H と Z を組み合わせて、|0⟩ に＋0.71、|1⟩ に−0.71 の矢印が並ぶ状態を作ってください。Z は |1⟩ の行の矢印の向きだけを反転するゲートです（|1⟩ に矢印がない状態にかけても、何も起きません）。",
     qlink: "Zゲートは|1⟩の矢印の向きだけを反転します。矢印の長さ（＝確率）は変わらないので、測定だけでは +0.71 と −0.71 の違いは見えません。この「向き」の情報を位相と呼びます。見えないのに計算の中では本物の違いとして働く——それを次のレベルで確かめます。",
     qubits: 1, labels: ["A"], gates: ["X","H","Z"],
@@ -524,7 +563,7 @@ const LEVELS = [
   },
   {
     name: "CNOT：可逆なXOR",
-    label: "LEVEL 7", shortName: "CNOT",
+    label: "LEVEL 7", shortName: "CNOT", matrix: "CNOT",
     desc: "CNOT を1個つないで、「Aが1のときだけBが反転する」回路を作ってください。つなぎ方：●（制御）のピンをAの線に、⊕（標的）のピンをBの線に。4通りの入力すべてで、A はそのまま・B は「AとBのXOR」になれば合格です。",
     qlink: "CNOTは2量子ビットゲートの基本で、制御（●）が1のときだけ標的（⊕）にXをかけます。標的の出力は A⊕B（AとBのXOR）そのもの。ただし古典のXORゲートと違って入力Aも手元に残るので、情報が消えません。XORの可逆版です。",
     qubits: 2, labels: ["A","B"], gates: ["CNOT"],
@@ -576,7 +615,7 @@ const LEVELS = [
   },
   {
     name: "トフォリ：可逆なAND",
-    label: "LEVEL 10", shortName: "トフォリ",
+    label: "LEVEL 10", shortName: "トフォリ", matrix: "CCX",
     desc: "トフォリ（制御が2個のCNOT）を1個つないで、「AとBが両方1のときだけCが反転する」回路を作ってください。つなぎ方：●2個をAとBの線に、⊕をCの線に。8通りの入力すべてで確かめます。",
     qlink: "トフォリゲートは制御が2個あるCNOTです。Cを最初に0にしておくと、通過後のCは「AとBが両方1のときだけ1」＝AND(A,B) になります。出力から入力を復元できないANDを、入力を残したまま実行する可逆版。古典回路でNANDが万能ゲートだったように、トフォリは可逆計算の万能ゲートです。",
     qubits: 3, labels: ["A","B","C"], gates: ["CNOT","CCX"],
@@ -627,7 +666,7 @@ const LEVELS = [
   },
   {
     name: "オラクル：鍵101に印をつける",
-    label: "LEVEL 13", shortName: "オラクル",
+    label: "LEVEL 13", shortName: "オラクル", matrix: "CCZ",
     desc: "探す鍵は 101 です。まず A・B・C に H を1個ずつかけて8通りの候補すべてに0.35ずつの矢印を立て、その後ろに X → CCZ → X をつないで、鍵 |101⟩ の矢印だけを反転してください。X は真ん中のBの線に（鍵の0の桁）、CCZ は3本全部の線につなぎます。",
     qlink: "オラクルは「候補が鍵と一致したときだけ矢印を反転する」固定の回路です。CCZ（3つ全部が1のときだけ矢印を反転する多重制御Z）と、鍵の0の桁をXで一時的に反転しておく組み合わせで、どんな鍵のオラクルも作れます。反転しても矢印の長さは変わらないので、印は測定の確率に一切現れません——見えない印（位相）だからこそ、このあとの干渉で利用できます。",
     qubits: 3, labels: ["A","B","C"], gates: ["H","X","CCZ"],
@@ -754,6 +793,7 @@ function loadLevel(idx){
   document.getElementById('dialog-scene').innerHTML = renderDialogue(lv.dialogue);
   document.getElementById('q-link-area').innerHTML = lv.qlink
     ? `<div class="q-link-box">⚛ <strong>量子コンピュータとのつながり</strong><br>${lv.qlink}</div>` : '';
+  document.getElementById('gate-matrix-area').innerHTML = lv.matrix ? gateMatrixHTML(lv.matrix) : '';
 
   buildLevelList();
   document.getElementById('verifyTable').innerHTML = '';
