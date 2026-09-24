@@ -169,6 +169,21 @@ a.head-btn{text-decoration:none;display:inline-flex;align-items:center;justify-c
 .gateBtn:hover{background:#dde6f7;border-color:#3f6fe0}
 .gateBtn.armed{background:#ffe9ad;border-color:#d4870a;box-shadow:inset 0 0 0 1px #d4870a}
 .gate-bar-hint{font-size:11px;color:#5a6c99;font-weight:700;margin-left:auto}
+/* ── 操作ガイド ── */
+#guideBtn{background:#fff;border:1.5px solid #2e7dd1;color:#1d5fae;border-radius:6px;padding:6px 11px;font-size:12px;font-weight:900;cursor:pointer;touch-action:manipulation;white-space:nowrap}
+#guideBtn.on{background:#2e7dd1;color:#fff}
+#opGuide{display:none;padding:10px 14px 8px;background:#fffbe8;border-bottom:1px solid #e3d48f;flex-shrink:0}
+#opGuide.open{display:block}
+.og-head{display:flex;align-items:center;gap:10px;margin-bottom:6px}
+.og-title{font-size:13px;font-weight:950;color:#5a4416}
+.og-close{margin-left:auto;background:none;border:1px solid #c9b46a;border-radius:6px;padding:3px 9px;font-size:11px;font-weight:800;color:#5a4416;cursor:pointer;touch-action:manipulation}
+.og-list{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:6px 14px;margin:0;padding:0;list-style:none}
+.og-list li{display:grid;grid-template-columns:30px minmax(0,1fr);gap:8px;align-items:start;font-size:12px;line-height:1.55;color:#3a2f16}
+.og-ic{width:30px;height:30px;border-radius:8px;background:#fff;border:1px solid #e3d48f;display:flex;align-items:center;justify-content:center;font-size:17px}
+.og-list li b{display:block;font-size:12.5px;color:#1b2340}
+.og-list li .og-kw{color:#1d5fae;font-weight:900}
+.sp-tip{background:#e8f1fd;border:1px solid #b9d3f5;border-radius:7px;padding:6px 9px;font-size:11.5px;font-weight:800;color:#1d4f8c;line-height:1.55;margin:6px 0}
+.sp-tip.on{background:#e2f6ea;border-color:#9fd8b5;color:#1f6b3f}
 #cipherSel{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:7px 14px;background:#fdf6e2;border-bottom:1px solid #d9c27a;flex-shrink:0}
 .cipher-label{font-size:12px;font-weight:900;color:#8a6d1e;white-space:nowrap}
 #cipherBtns{display:flex;gap:6px}
@@ -220,7 +235,8 @@ a.head-btn{text-decoration:none;display:inline-flex;align-items:center;justify-c
 .amp-row:hover{background:#eef3fb}
 .amp-row.zero{opacity:.42}
 .amp-row.traced{background:#e2ecff;outline:2px solid #2e7dd1;outline-offset:-2px;opacity:1}
-.trace-cap{font-size:10.5px;color:var(--muted);font-weight:750;line-height:1.6;margin-top:7px}
+.trace-cap{font-size:11.5px;color:#1d4f8c;font-weight:800;line-height:1.55;margin-top:8px;background:#e8f1fd;border:1px solid #b9d3f5;border-radius:7px;padding:6px 9px}
+.trace-cap.on{background:#e2f6ea;border-color:#9fd8b5;color:#1f6b3f}
 .amp-row.flash{background:#fff3c4;border-radius:6px}
 .amp-ket{font-size:13px;font-weight:950;font-family:ui-monospace,'Cascadia Code',monospace;white-space:nowrap}
 .amp-val{font-size:12px;font-weight:900;text-align:right;font-family:ui-monospace,monospace;white-space:nowrap}
@@ -364,7 +380,11 @@ button{touch-action:manipulation;-webkit-tap-highlight-color:transparent}
         <div id="gate-bar">
           <span class="gate-bar-label">ゲートを選ぶ：</span>
           <span id="gateBtns" style="display:flex;gap:6px;flex-wrap:wrap"></span>
-          <span class="gate-bar-hint">配線：出力ピン（青）→入力ピンの順にタップかドラッグ／ゲートはドラッグで移動・✕で削除／線はタップで削除／線の見た目の交差に意味はありません（意味を持つのは、どのピンにつながるかだけ）</span>
+          <button id="guideBtn" onclick="toggleGuide()">❔ 操作方法</button>
+        </div>
+        <div id="opGuide">
+          <div class="og-head"><span class="og-title">🎮 操作方法</span><button class="og-close" onclick="toggleGuide(false)">✕ 閉じる</button></div>
+          <ul class="og-list" id="ogList"></ul>
         </div>
         <div id="cipherSel" style="display:none">
           <span class="cipher-label">暗号文 C を選ぶ：</span>
@@ -946,6 +966,46 @@ function showIntro(){
   document.getElementById('game-screen').style.display = 'none';
   document.getElementById('app-shell').classList.remove('game-mode');
 }
+// ====================== 操作ガイド ======================
+const GUIDE_KEY = 'quantum_circuit_v2_guide_closed';
+function guideItems(lv){
+  const observe = lv.mode === 'loop' || lv.mode === 'shor';
+  const it = [];
+  const li = (ic, title, body) => it.push(`<li><span class="og-ic">${ic}</span><span><b>${title}</b>${body}</span></li>`);
+  if (!observe){
+    li('🧩', 'ゲートを置く', '上の<span class="og-kw">「ゲートを選ぶ」</span>のボタンをタップすると回路に現れます。ドラッグで移動、✕ で削除。');
+    li('🔗', '線をつなぐ', '<span class="og-kw">青い丸（出力ピン）</span>をタップ → つなぎ先の<span class="og-kw">灰色の丸（入力ピン）</span>をタップ。ドラッグでも引けます。線はタップで消えます。');
+  }
+  if (lv.mode === 'unitary'){
+    li('🔀', '入力を変える', '左端の緑の<span class="og-kw">「入力」をタップ</span>すると 0 ⇄ 1 が切り替わります。合格には表にある入力すべてで正しい出力が必要です。');
+  } else if (lv.mode === 'state' || lv.mode === 'mystery'){
+    li('🔀', '入力について', 'このレベルの入力は <span class="og-kw">|0…0⟩ で固定</span>。重ね合わせを作るのは H などのゲートの仕事です。');
+  }
+  if (lv.mode === 'shor'){
+    li('🔍', '数値を追う', '一覧表の<span class="og-kw">候補をタップ</span>すると、その数え上げ値の枝で作業レジスタが 1 → … → 7ˣ に育つ道すじが回路の上に表示されます。もう一度タップで解除。');
+    li('🎲', '測定する', '<span class="og-kw">「▶ 回路を通して測定」</span>で数え上げレジスタを何度か測り、<span class="og-kw">「✓ 周期を求めて素因数分解」</span>へ。');
+  } else if (lv.mode === 'loop'){
+    li('🔁', '回路を回す', '一覧表のボタンで回路に<span class="og-kw">反復を通し</span>、鍵候補の矢印がどう育つかを見ます。測定して鍵を言い当てればクリア。');
+  } else {
+    li('🔍', '数値を追う', '<span class="og-kw">「矢印の一覧表」の行をタップ</span>すると、その候補に至る道すじで各線が 0 か 1 かが回路の上に表示されます（緑＝1・灰＝0）。もう一度タップで解除。');
+    li('✅', '答え合わせ', '<span class="og-kw">「▶ 検証する」</span>で合格条件と比べます。行き詰まったら<span class="og-kw">「解答」</span>で正解の回路が置かれます。');
+  }
+  return it.join('');
+}
+function toggleGuide(force){
+  const g = document.getElementById('opGuide');
+  const open = typeof force === 'boolean' ? force : !g.classList.contains('open');
+  g.classList.toggle('open', open);
+  document.getElementById('guideBtn').classList.toggle('on', open);
+  try { localStorage.setItem(GUIDE_KEY, open ? '0' : '1'); } catch (e) {}
+}
+function renderGuide(){
+  document.getElementById('ogList').innerHTML = guideItems(LV());
+  let closed = '0';
+  try { closed = localStorage.getItem(GUIDE_KEY) || '0'; } catch (e) {}
+  toggleGuide(closed !== '1');
+}
+
 function startGame(){
   document.getElementById('intro-screen').style.display = 'none';
   document.getElementById('game-screen').style.display = 'flex';
@@ -958,6 +1018,7 @@ function startGame(){
   document.getElementById('cipherSel').style.display = LV().pickCipher ? 'flex' : 'none';
   if (LV().pickCipher) buildCipherSel();
   if (!observe) buildGateBar();
+  renderGuide();
   resetCircuit();
 }
 
@@ -1680,6 +1741,7 @@ function render(){
       const bit = lv.mode === 'unitary' ? inputBits[node.qidx] : 0;
       out += `<text x="${node.x + w/2}" y="${node.y + 13}" font-size="9" font-weight="900" text-anchor="middle" fill="#3a9e63" pointer-events="none">入力${lv.mode==='unitary' ? ' ⇄' : ''}</text>`;
       out += `<text x="${node.x + w/2}" y="${node.y + 30}" font-size="14" font-weight="900" text-anchor="middle" fill="#1b2340" font-family="ui-monospace,monospace" pointer-events="none">${node.label}=|${bit}⟩</text>`;
+      if (lv.mode === 'unitary') out += `<text x="${node.x + w/2}" y="${node.y + h + 11}" font-size="8.5" font-weight="900" text-anchor="middle" fill="#3a9e63" pointer-events="none">👆 タップで 0/1</text>`;
     } else if (node.type === 'OUTPUT'){
       out += `<text x="${node.x + w/2}" y="${node.y + 13}" font-size="9" font-weight="900" text-anchor="middle" fill="#c56a2a" pointer-events="none">出力</text>`;
       out += `<text x="${node.x + w/2}" y="${node.y + 30}" font-size="15" font-weight="950" text-anchor="middle" fill="#1b2340" pointer-events="none">${node.label}</text>`;
@@ -1800,9 +1862,9 @@ function renderStatePanel(){
   const idx = panelInputIdx();
   const ev = evalCircuit(idx);
   document.getElementById('spInputNote').innerHTML = (lv.mode === 'unitary'
-    ? `入力：|${ketStr(idx, n)}⟩（左の入力ノードをタップで 0/1 切り替え）`
+    ? `入力：|${ketStr(idx, n)}⟩<div class="sp-tip">👆 左端の「入力」をタップすると 0 ⇄ 1 が切り替わります</div>`
     : `入力：|${ketStr(idx, n)}⟩ から出発`)
-    + `<br>0/1の並びは、回路の上の線から順（${lv.labels.join('・')}）`;
+    + `0/1の並びは、回路の上の線から順（${lv.labels.join('・')}）`;
   if (!ev){
     document.getElementById('ampTable').innerHTML =
       '<div class="sp-incomplete">配線が未完成です。<br>入力 →（ゲート）→ 出力まで、すべてのピンをつなぐと一覧表が出ます。</div>';
@@ -1831,8 +1893,8 @@ function renderStatePanel(){
     </div>`;
   }
   html += traceIdx != null
-    ? `<div class="trace-cap">|${ketStr(traceIdx, n)}⟩ に至るラインを回路に表示中（各配線が0か1か）。緑=1・灰=0。もう一度クリックで解除。</div>`
-    : `<div class="trace-cap">候補の行をクリックすると、その候補に至るラインで各配線がゲート前後で0か1かを回路に表示します。</div>`;
+    ? `<div class="trace-cap on">🔍 |${ketStr(traceIdx, n)}⟩ の道すじを回路に表示中（各線が 0 か 1 か：緑＝1・灰＝0）。もう一度タップで解除。</div>`
+    : `<div class="trace-cap">👆 行をタップすると、その候補に至る道すじで各線が 0 か 1 かを回路の上に表示します。</div>`;
   document.getElementById('ampTable').innerHTML = html;
 }
 
